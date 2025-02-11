@@ -20,7 +20,7 @@ xdotCurrentTar = 0;
 ydotCurrentTar = 0;
 
 %Torque to track our desired point
-T = AdaptiveImpedanceControl(p.l1,p.l2,th1,th2,thdot1,thdot2,xdotCurrentTar,xCurrentTar,ydotCurrentTar,yCurrentTar);
+T = ActiveImpedanceControl(p.l1,p.l2,th1,th2,thdot1,thdot2,xdotCurrentTar,xCurrentTar,ydotCurrentTar,yCurrentTar);
 
 %Add gravity compensation
 T1 = T(1) + GravityCompT1(0,0,p.d1,p.d2,p.g,p.l1,p.l2,p.m1,p.m2,th1,th2,thdot1,thdot2);

@@ -30,7 +30,7 @@ rederive = false;
 %%%%%%%% System Parameters %%%%%%%%
 
 %Initial conditions:
-p.init = [pi/4    0.0    pi/4  0.0];
+p.init = [pi/4    0.0    pi/2  0.0];
 
 p.g = 9.81;
 p.m1 = 1; %Mass of link 1.
@@ -49,10 +49,17 @@ p.Fx = 0;
 p.Fy = 0;
 
 %%%%%%%% Control Parameters %%%%%%%%
+p.Kp_min = 1;  % Minimo per Kp
+p.Kp_max = 100; % Massimo per Kp
+p.Kd_min = 0.1;  % Minimo per Kd
+p.Kd_max = 50;   % Massimo per Kd
+
+p.gamma_p = 10;
+p.gamma_d = 10;
 
 %Controller Gains
-%p.Kp = 10; %Stiffness - Proportional gain
-%p.Kd = 8; %Damping - Derivative gain
+p.Kp = @(position_error) p.Kp_min + (p.Kp_max - p.Kp_min) * (1 - exp(-p.gamma_p * position_error));
+p.Kd = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-p.gamma_d * velocity_error));
 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?

@@ -78,19 +78,12 @@ matlabFunction(T1Eq, 'file', 'GravityCompT1');
 matlabFunction(T2Eq, 'file', 'GravityCompT2');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%% Adaptive Impedence Control %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% Active Impedence Control %%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 J = jacobian(Ve,[thdot1,thdot2]);
 
-syms Kp(t) Kd(t) xt yt xdott ydott real
-
-zt = [xt yt 0 ]'; 
-ztdot = [xdott ydott 0]';
-
-position_error = norm(zt - ra_e);
-
-velocity_error = norm(ztdot - J*[thdot1 thdot2]');
+syms xt yt xdott ydott real
 
 Kp_min = 1;  % Minimo per Kp
 Kp_max = 100; % Massimo per Kp
@@ -98,45 +91,21 @@ Kd_min = 0.1;  % Minimo per Kd
 Kd_max = 50;   % Massimo per Kd
 
 gamma_p = 10;
-Kp_value = Kp_min + (Kp_max - Kp_min) * (1 - exp(-gamma_p * position_error));
-
 gamma_d = 10;
-Kd_value = Kd_min + (Kd_max - Kd_min) * (1 - exp(-gamma_d * velocity_error));
+
+Kp = @(p_err) Kp_min + (Kp_max - Kp_min) * (1 - exp(-gamma_p * p_err));
+Kd = @(v_err) Kd_min + (Kd_max - Kd_min) * (1 - exp(-gamma_d * v_err));
+
+zt = [xt yt 0 ]'; 
+ztdot = [xdott ydott 0]';
+
+position_error = norm(zt - ra_e);
+velocity_error = norm(ztdot - J*[thdot1 thdot2]');
+
+Kp_value = Kp(position_error);
+Kd_value = Kd(velocity_error);
 
 Ta = J' * (Kp_value * (zt - ra_e) + Kd_value * (ztdot - J * [thdot1 thdot2]'));
 
-matlabFunction(Ta, 'file', 'AdaptiveImpedanceControl');
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%% Impedance control?   %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%Jacobian relating end effector velocity to joint space vel
-% ie Ve = J*qv
-
-%J = jacobian(Ve,{thdot1 thdot2});
-
-%syms Kp Kd xt yt xdott ydott real
-
-%zt = [xt yt 0 ]'; %Trajectory tracked
-%ztdot = [xdott ydott 0]'; %velocity tracked
-
-%Ta = J'*(Kp*(zt - ra_e) + Kd*(ztdot - J*[thdot1 thdot2]'));
-
-%matlabFunction(Ta, 'file', 'ImpedenceControl');
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%% Energy eqns %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%Turned this off after making sure stuff worked:
-
-% syms k1 k2 real
-% 
-% PE = g*dot(ra_c2,j)*m2 + g*dot(ra_c1,j)*m1;
-% KE = 1/2*I1*thdot1^2 + 1/2*I2*(thdot2+thdot1)^2 + 1/2*m1*dot(Vc1,Vc1) + 1/2*m2*dot(Vc2,Vc2);
-% 
-% Etot = PE + KE;
-% 
-% matlabFunction(Etot, 'file', 'TotEnergy');
+matlabFunction(Ta, 'file', 'ActiveImpedanceControl');
 

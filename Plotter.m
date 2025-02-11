@@ -59,6 +59,10 @@ timer = text(-3.2,-3.2,'0.00','FontSize',28);
 tmeter1 = text(0.6,-3.2,'0.00','FontSize',22,'Color', 'r');  % Torque T1
 tmeter2 = text(3,-3.2,'0.00','FontSize',22,'Color', 'b');  % Torque T2
 
+% Aggiungi i testi per visualizzare Kp_value e Kd_value
+kpText = text(0.6, -4.4, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
+kdText = text(3, -4.4, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
+
 %Position error and velocity error
 posErrorText = text(0.6,-3.6, 'Pos Error: 0.00 m', 'FontSize', 18, 'Color', 'g');
 velErrorText = text(0.6,-4.0, 'Vel Error: 0.00 m/s', 'FontSize', 18, 'Color', '[0 0 0]');
@@ -160,15 +164,21 @@ while (ishandle(f))
     %Show torques on screen (text only atm) update for time series later.
     set(tmeter1,'string',strcat(num2str(T1,2),' Nm'));
     set(tmeter2,'string',strcat(num2str(T2,2),' Nm'));
-    
+
     % Calculate position and velocity errors
     position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0
     
+    % Calcola i valori di Kp e Kd
+    Kp_value = p.Kp(position_error);
+    Kd_value = p.Kd(velocity_error);
+    
     % Update position error and velocity error display
     set(posErrorText, 'string', strcat('Pos Error: ', num2str(position_error, 2), ' m'));  % Position error display
     set(velErrorText, 'string', strcat('Vel Error: ', num2str(velocity_error, 2), ' m/s'));  % Velocity error display
-    
+    % Aggiorna la visualizzazione dei valori di Kp e Kd
+    set(kpText, 'string', strcat('Kp: ', num2str(Kp_value, 2)));
+    set(kdText, 'string', strcat('Kd: ', num2str(Kd_value, 2)));
     drawnow;
 end
 end
