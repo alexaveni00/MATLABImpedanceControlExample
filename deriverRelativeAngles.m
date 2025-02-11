@@ -77,6 +77,36 @@ T1Eq = simplify(subs(solve(eqn1,T1),T2,T2Eq));
 matlabFunction(T1Eq, 'file', 'GravityCompT1');
 matlabFunction(T2Eq, 'file', 'GravityCompT2');
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% Adaptive Impedence Control %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+J = jacobian(Ve,[thdot1,thdot2]);
+
+syms Kp(t) Kd(t) xt yt xdott ydott real
+
+zt = [xt yt 0 ]'; 
+ztdot = [xdott ydott 0]';
+
+position_error = norm(zt - ra_e);
+
+velocity_error = norm(ztdot - J*[thdot1 thdot2]');
+
+Kp_min = 1;  % Minimo per Kp
+Kp_max = 100; % Massimo per Kp
+Kd_min = 0.1;  % Minimo per Kd
+Kd_max = 50;   % Massimo per Kd
+
+gamma_p = 10;
+Kp_value = Kp_min + (Kp_max - Kp_min) * (1 - exp(-gamma_p * position_error));
+
+gamma_d = 10;
+Kd_value = Kd_min + (Kd_max - Kd_min) * (1 - exp(-gamma_d * velocity_error));
+
+Ta = J' * (Kp_value * (zt - ra_e) + Kd_value * (ztdot - J * [thdot1 thdot2]'));
+
+matlabFunction(Ta, 'file', 'AdaptiveImpedanceControl');
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%% Impedance control?   %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -84,16 +114,16 @@ matlabFunction(T2Eq, 'file', 'GravityCompT2');
 %Jacobian relating end effector velocity to joint space vel
 % ie Ve = J*qv
 
-J = jacobian(Ve,{thdot1 thdot2});
+%J = jacobian(Ve,{thdot1 thdot2});
 
-syms Kp Kd xt yt xdott ydott real
+%syms Kp Kd xt yt xdott ydott real
 
-zt = [xt yt 0 ]'; %Trajectory tracked
-ztdot = [xdott ydott 0]'; %velocity tracked
+%zt = [xt yt 0 ]'; %Trajectory tracked
+%ztdot = [xdott ydott 0]'; %velocity tracked
 
-Ta = J'*(Kp*(zt - ra_e) + Kd*(ztdot - J*[thdot1 thdot2]'));
+%Ta = J'*(Kp*(zt - ra_e) + Kd*(ztdot - J*[thdot1 thdot2]'));
 
-matlabFunction(Ta, 'file', 'ImpedenceControl');
+%matlabFunction(Ta, 'file', 'ImpedenceControl');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%% Energy eqns %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

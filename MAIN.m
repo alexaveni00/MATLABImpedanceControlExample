@@ -30,7 +30,7 @@ rederive = false;
 %%%%%%%% System Parameters %%%%%%%%
 
 %Initial conditions:
-p.init = [pi/4    0.0    pi/4  0.0]';
+p.init = [pi/4    0.0    pi/4  0.0];
 
 p.g = 9.81;
 p.m1 = 1; %Mass of link 1.
@@ -51,8 +51,8 @@ p.Fy = 0;
 %%%%%%%% Control Parameters %%%%%%%%
 
 %Controller Gains
-p.Kp = 10;
-p.Kd = 8;
+%p.Kp = 10; %Stiffness - Proportional gain
+%p.Kd = 8; %Damping - Derivative gain
 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
