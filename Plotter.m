@@ -19,7 +19,7 @@ close all
 
 %Name the whole window and define the mouse callback function
 f = figure;
-set(f,'WindowButtonMotionFcn','','WindowButtonDownFcn',@ClickDown,'WindowButtonUpFcn',@ClickUp,'KeyPressFc',@KeyPress);
+set(f,'WindowButtonMotionFcn','');
 
 figData.xtarget = [];
 figData.ytarget = [];
@@ -65,15 +65,20 @@ kdText = text(3, -4.4, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 
 %Position error and velocity error
 posErrorText = text(0.6,-3.6, 'Pos Error: 0.00 m', 'FontSize', 18, 'Color', 'g');
-velErrorText = text(0.6,-4.0, 'Vel Error: 0.00 m/s', 'FontSize', 18, 'Color', '[0 0 0]');
+velErrorText = text(0.6,-4.0, 'Vel Error: 0.00 m/s', 'FontSize', 18, 'Color', 'k');
 
 %Target Pt.
-targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
-
+targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',18);
 hold off
 
 %Make the whole window big for handy viewing:
-set(f, 'units', 'inches', 'position', [5 5 10 9])
+screenSize = get(0, 'ScreenSize');
+figWidth = 800;
+figHeight = 600;
+figX = (screenSize(3) - figWidth) / 2;
+figY = (screenSize(4) - figHeight) / 2;
+
+set(f, 'units', 'pixels', 'position', [figX figY figWidth figHeight])
 set(f,'Color',[1,1,1]);
 
 % Turn the axis off
@@ -110,10 +115,21 @@ while (ishandle(f))
     
     z2 = [xnew(1) vnew(1) xnew(2) vnew(2)];
 
+    % Limit the angle of the second link
+    max_angle = p.init(3) + p.init(3) / 2; % Maximum angle for the second link
+    if z2(3) > max_angle || z2(3) < -max_angle
+        z2(3) = max_angle;
+    end
+
     z1 = z2;
     told = tnew;
     %%%%%%%%%%%%%%%%%%%%
-    
+
+    % Update the target based on the trajectory
+    [p.xtarget, p.ytarget] = p.trajectory(tnew);
+    set(targetPt,'xData',p.xtarget); %Change the target point graphically.
+    set(targetPt,'yData',p.ytarget);
+
     %If there are new mouse click locations, then set those as the new
     %target.
     if ~isempty(figData.xtarget)
@@ -123,9 +139,7 @@ while (ishandle(f))
     if ~isempty(figData.ytarget)
     p.ytarget = figData.ytarget;
     end
-    set(targetPt,'xData',p.xtarget); %Change the target point graphically.
-    set(targetPt,'yData',p.ytarget);
-    
+
     %When you hit a key, it changes to force mode, where the mouse will
     %pull things.
     ra_e = ForwardKin(p.l1,p.l2,z1(1),z1(3));
@@ -169,68 +183,16 @@ while (ishandle(f))
     position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0
     
-    % Calcola i valori di Kp e Kd
+    % Calculate Kp and Kd values
     Kp_value = p.Kp(position_error);
     Kd_value = p.Kd(velocity_error);
-    
+
     % Update position error and velocity error display
     set(posErrorText, 'string', strcat('Pos Error: ', num2str(position_error, 2), ' m'));  % Position error display
     set(velErrorText, 'string', strcat('Vel Error: ', num2str(velocity_error, 2), ' m/s'));  % Velocity error display
-    % Aggiorna la visualizzazione dei valori di Kp e Kd
+    
+    % Update Kp e Kd display
     set(kpText, 'string', strcat('Kp: ', num2str(Kp_value, 2)));
     set(kdText, 'string', strcat('Kd: ', num2str(Kd_value, 2)));
     drawnow;
-end
-end
-
-%%%% BEGIN CALLBACKS FOR MOUSE AND KEYBOARD STUFF %%%%%
-
-% When click-up occurs, disable the mouse motion detecting callback
-function ClickUp(varargin)
-    figData = get(varargin{1},'UserData');
-    set(figData.fig,'WindowButtonMotionFcn','');
-    figData.Fx = 0;
-    figData.Fy = 0;
-    set(varargin{1},'UserData',figData);
-end
-
-% When click-down occurs, enable the mouse motion detecting callback
-function ClickDown(varargin)
-    figData = get(varargin{1},'UserData');
-    figData.Fx = 0;
-    figData.Fy = 0;
-
-    set(figData.fig,'WindowButtonMotionFcn',@MousePos);
-    set(varargin{1},'UserData',figData);
-end
-
-% any keypress switches from dragging the setpoint to applying a
-% disturbance.
-function KeyPress(hObject, eventdata, handles)
-
-figData = get(hObject,'UserData');
-
-figData.tarControl = ~figData.tarControl;
-
-    if figData.tarControl
-       disp('Mouse will change the target point of the end effector.')
-    else
-       disp('Mouse will apply a force on end effector.') 
-    end
-set(hObject,'UserData',figData);
-end
-
-% Checks mouse position and sends it back up.
-function MousePos(varargin)
-    figData = get(varargin{1},'UserData');
-
-    mousePos = get(figData.simArea,'CurrentPoint');
-    if figData.tarControl
-        figData.xtarget = mousePos(1,1);
-        figData.ytarget = mousePos(1,2);
-    else
-        figData.Fx = 10*(mousePos(1,1)-figData.xend);
-        figData.Fy = 10*(mousePos(1,2)-figData.yend);
-    end
-     set(varargin{1},'UserData',figData);
 end
