@@ -29,8 +29,8 @@ clear all;
 rederive = false;
 %%%%%%%% System Parameters %%%%%%%%
 
-%Initial conditions:
-p.init = [pi/4    0.0    pi/2  0.0];
+%Initial conditions: Il primo parametro risulta sfasato di +90 gradi
+p.init = [3/4*pi    0.0    pi/2 0.0];
 
 p.g = 9.81;
 p.m1 = 1; %Mass of link 1.
@@ -47,7 +47,6 @@ x0 = endZ(1); %End effector initial position in world frame.
 y0 = endZ(2);
 p.Fx = 0;
 p.Fy = 0;
-
 %%%%%%%% Control Parameters %%%%%%%%
 p.Kp_min = 1;  % Minimo per Kp
 p.Kp_max = 100; % Massimo per Kp
@@ -65,17 +64,30 @@ p.Kd = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-p.gamma_d 
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
 p.ytarget = y0;
 
-%%%%%%%% Run Derivers %%%%%%%%
+p.T = 4; %Period of the trajectory
+%%%%%%%% Define Trajectory %%%%%%%%
+p.trajectory = @(t, p_err) defineTrajectory(t, x0, y0, p.T);
 
-if rederive
-%If the gain matrix hasn't been found yet, then we assume derivation hasn't
-%happened yet.
-        deriverRelativeAngles;
-        disp('Equations of motion and control parameters derived using relative angles.');
+function [xt, yt] = defineTrajectory(t, x0, y0, T)
+    % Define the radius of the semicircle
+    r = 0.7;
+    % Calculate the phase of the trajectory
+    phase = mod(t, T) / T; % tempo normalizzato tra 0 e 1
+    theta = pi * phase / 0.5;
+
+    if phase < 0.5
+        xt = x0 + r * cos(theta);
+        yt = y0 + r * sin(theta);
+        return;
+    end
+  
+    if phase > 0.5
+        xt = x0 + r * cos(0) - 2*r;
+        yt = y0 + r * sin(0);
+        return;
+    end
+
 end
-
-%%%%%%%% Integrate %%%%%%%%
-
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
 
 
