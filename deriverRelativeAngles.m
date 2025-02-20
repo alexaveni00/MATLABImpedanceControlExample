@@ -7,8 +7,9 @@
 %ANGLE RELATIVE TO THE UPPER ARM ANGLE.
 
 %Parameters symbolically.
-syms m1 m2 I1 I2 g l1 l2 d1 d2 th1 th2 thdot1 thdot2 thdotdot1 thdotdot2 er1 er2 eth1 eth2 T1 T2 real
+syms m1 m2 I1 I2 g l1 l2 d1 d2 th1 th2 thdot1 thdot2 thdotdot1 thdotdot2 T1 T2 real
 
+run('constants.m');
 %Unit vectors, cartesian
 i = [1 0 0]';
 j = [0 1 0]';
@@ -84,14 +85,6 @@ matlabFunction(T2Eq, 'file', 'GravityCompT2');
 J = jacobian(Ve,[thdot1,thdot2]);
 
 syms xt yt xdott ydott real
-
-Kp_min = 1;  % Minimo per Kp
-Kp_max = 100; % Massimo per Kp
-Kd_min = 0.1;  % Minimo per Kd
-Kd_max = 50;   % Massimo per Kd
-
-gamma_p = 10;
-gamma_d = 10;
 
 Kp = @(p_err) Kp_min + (Kp_max - Kp_min) * (1 - exp(-gamma_p * p_err));
 Kd = @(v_err) Kd_min + (Kd_max - Kd_min) * (1 - exp(-gamma_d * v_err));
