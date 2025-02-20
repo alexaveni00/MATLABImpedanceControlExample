@@ -63,10 +63,12 @@ p.Kd = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-p.gamma_d 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
 p.ytarget = y0;
+p.stop = false;
 
 p.T = 4; %Period of the trajectory
 %%%%%%%% Define Trajectory %%%%%%%%
-p.trajectory = @(t, p_err) defineTrajectory(t, x0, y0, p.T);
+p.isActive = false;
+p.trajectory = @(t) defineTrajectory(t, x0, y0, p.T);
 
 function [xt, yt] = defineTrajectory(t, x0, y0, T)
     % Define the radius of the semicircle
@@ -80,13 +82,12 @@ function [xt, yt] = defineTrajectory(t, x0, y0, T)
         yt = y0 + r * sin(theta);
         return;
     end
-  
+
     if phase > 0.5
         xt = x0 + r * cos(0) - 2*r;
         yt = y0 + r * sin(0);
         return;
     end
-
 end
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
 
