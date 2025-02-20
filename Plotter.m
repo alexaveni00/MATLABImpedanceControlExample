@@ -13,11 +13,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Plotter(p)
 close all
-
-%Playback speed:
-% playback = p.animationSpeed;
-
-%Name the whole window and define the mouse callback function
+%Create the figure object and set the callback functions.
 f = figure;
 set(f,'WindowButtonMotionFcn','');
 
@@ -85,6 +81,9 @@ set(f,'Color',[1,1,1]);
 ax = get(f,'Children');
 set(ax,'Visible','off');
 
+% Create button
+btn = uicontrol('Style', 'pushbutton', 'String', 'Start Trajectory', 'Position', [350, 50, 100, 30], 'Callback', @startStopCallback);
+
 %Animation plot loop -- Includes symplectic integration now.
 z1 = p.init;
 told = 0;
@@ -126,9 +125,11 @@ while (ishandle(f))
     %%%%%%%%%%%%%%%%%%%%
 
     % Update the target based on the trajectory
-    [p.xtarget, p.ytarget] = p.trajectory(tnew);
-    set(targetPt,'xData',p.xtarget); %Change the target point graphically.
-    set(targetPt,'yData',p.ytarget);
+    if p.isActive
+        [p.xtarget, p.ytarget] = p.trajectory(tnew);
+        set(targetPt,'xData',p.xtarget); %Change the target point graphically.
+        set(targetPt,'yData',p.ytarget);
+    end
 
     %If there are new mouse click locations, then set those as the new
     %target.
@@ -195,4 +196,13 @@ while (ishandle(f))
     set(kpText, 'string', strcat('Kp: ', num2str(Kp_value, 2)));
     set(kdText, 'string', strcat('Kd: ', num2str(Kd_value, 2)));
     drawnow;
+end
+function startStopCallback(~, ~)
+    p.isActive = ~p.isActive; % Alterna tra true e false
+    if p.isActive
+        set(btn, 'String', 'Stop Trajectory');
+    else
+        set(btn, 'String', 'Start Trajectory');
+    end
+end
 end
