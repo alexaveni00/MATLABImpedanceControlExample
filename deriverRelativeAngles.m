@@ -84,10 +84,7 @@ matlabFunction(T2Eq, 'file', 'GravityCompT2');
 
 J = jacobian(Ve,[thdot1,thdot2]);
 
-syms xt yt xdott ydott real
-
-Kp = @(p_err) Kp_min + (Kp_max - Kp_min) * (1 - exp(-gamma_p * p_err));
-Kd = @(v_err) Kd_min + (Kd_max - Kd_min) * (1 - exp(-gamma_d * v_err));
+syms Kp Kd xt yt xdott ydott real
 
 zt = [xt yt 0 ]'; 
 ztdot = [xdott ydott 0]';
@@ -95,10 +92,7 @@ ztdot = [xdott ydott 0]';
 position_error = norm(zt - ra_e);
 velocity_error = norm(ztdot - J*[thdot1 thdot2]');
 
-Kp_value = Kp(position_error);
-Kd_value = Kd(velocity_error);
-
-Ta = J' * (Kp_value * (zt - ra_e) + Kd_value * (ztdot - J * [thdot1 thdot2]'));
+Ta = J' * (Kp * (zt - ra_e) + Kd * (ztdot - J * [thdot1 thdot2]'));
 
 matlabFunction(Ta, 'file', 'ActiveImpedanceControl');
 

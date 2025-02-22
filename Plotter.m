@@ -55,7 +55,7 @@ timer = text(-3.2,-3.2,'0.00','FontSize',28);
 tmeter1 = text(0.6,-3.2,'0.00','FontSize',22,'Color', 'r');  % Torque T1
 tmeter2 = text(3,-3.2,'0.00','FontSize',22,'Color', 'b');  % Torque T2
 
-% Aggiungi i testi per visualizzare Kp_value e Kd_value
+% Aggiungi i testi per visualizzare Kp e Kd
 kpText = text(0.6, -4.4, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(3, -4.4, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 
@@ -100,9 +100,17 @@ while (ishandle(f))
     %Old velocity and position
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
+
+    % Calculate position and velocity errors
+    position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
+    velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0
+    
+    % Calculate Kp and Kd values
+    Kp = p.Kp_function(position_error);
+    Kd = p.Kd_function(velocity_error);
    
     %Call RHS given old state
-    [zdot1, T1, T2] = FullDyn(tnew,z1,p);
+    [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd);
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     
@@ -180,21 +188,13 @@ while (ishandle(f))
     set(tmeter1,'string',strcat(num2str(T1,2),' Nm'));
     set(tmeter2,'string',strcat(num2str(T2,2),' Nm'));
 
-    % Calculate position and velocity errors
-    position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
-    velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0
-    
-    % Calculate Kp and Kd values
-    Kp_value = p.Kp(position_error);
-    Kd_value = p.Kd(velocity_error);
-
     % Update position error and velocity error display
     set(posErrorText, 'string', strcat('Pos Error: ', num2str(position_error, 2), ' m'));  % Position error display
     set(velErrorText, 'string', strcat('Vel Error: ', num2str(velocity_error, 2), ' m/s'));  % Velocity error display
     
     % Update Kp e Kd display
-    set(kpText, 'string', strcat('Kp: ', num2str(Kp_value, 2)));
-    set(kdText, 'string', strcat('Kd: ', num2str(Kd_value, 2)));
+    set(kpText, 'string', strcat('Kp: ', num2str(Kp, 2)));
+    set(kdText, 'string', strcat('Kd: ', num2str(Kd, 2)));
     drawnow;
 end
 function startStopCallback(~, ~)

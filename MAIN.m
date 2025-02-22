@@ -58,8 +58,8 @@ p.Fx = 0;
 p.Fy = 0;
 
 %Controller Gains
-p.Kp = @(position_error) p.Kp_min + (p.Kp_max - p.Kp_min) * (1 - exp(-p.gamma_p * position_error));
-p.Kd = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-p.gamma_d * velocity_error));
+p.Kp_function = @(position_error) p.Kp_min + (p.Kp_max - p.Kp_min) * (1 - exp(-p.gamma_p * position_error));
+p.Kd_function = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-p.gamma_d * velocity_error));
 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
