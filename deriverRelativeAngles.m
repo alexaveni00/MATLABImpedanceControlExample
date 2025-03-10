@@ -79,7 +79,7 @@ matlabFunction(T1Eq, 'file', 'GravityCompT1');
 matlabFunction(T2Eq, 'file', 'GravityCompT2');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%% Active Impedence Control %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% Impedence Control %%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 J = jacobian(Ve,[thdot1,thdot2]);
@@ -89,10 +89,7 @@ syms Kp Kd xt yt xdott ydott real
 zt = [xt yt 0 ]'; 
 ztdot = [xdott ydott 0]';
 
-position_error = norm(zt - ra_e);
-velocity_error = norm(ztdot - J*[thdot1 thdot2]');
-
 Ta = J' * (Kp * (zt - ra_e) + Kd * (ztdot - J * [thdot1 thdot2]'));
 
-matlabFunction(Ta, 'file', 'ActiveImpedanceControl');
+matlabFunction(Ta, 'file', 'ImpedanceControl');
 
