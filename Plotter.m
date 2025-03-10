@@ -65,6 +65,14 @@ velErrorText = text(0.6,-4.0, 'Vel Error: 0.00 m/s', 'FontSize', 18, 'Color', 'k
 
 %Target Pt.
 targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',18);
+
+% Calcola la posizione finale della traiettoria
+[~, yt_final,~] = p.trajectory(p.T);
+
+% Create lines to indicate the terrain
+terrainLine1 = plot([-3.5, 0], [yt_final, yt_final], 'k-', 'LineWidth', 1); % Prima parte della linea
+terrainLine2 = plot([0, 3.5], [yt_final, yt_final], 'k-', 'LineWidth', 1); % Seconda parte della linea
+
 hold off
 
 %Make the whole window big for handy viewing:
@@ -82,7 +90,15 @@ ax = get(f,'Children');
 set(ax,'Visible','off');
 
 % Create button
-btn = uicontrol('Style', 'pushbutton', 'String', 'Start Trajectory', 'Position', [350, 50, 100, 30], 'Callback', @startStopCallback);
+btn = uicontrol('Style', 'pushbutton', 'String', 'Start Trajectory', 'Position', [500, 550, 100, 30], 'Callback', @startStopCallback);
+
+% Create buttons for different terrains
+btnSoft = uicontrol('Style', 'pushbutton', 'String', 'Soft Terrain', 'Position', [50, 550, 100, 30], 'Callback', @softTerrainCallback);
+btnHard = uicontrol('Style', 'pushbutton', 'String', 'Hard Terrain', 'Position', [200, 550, 100, 30], 'Callback', @hardTerrainCallback);
+btnStep = uicontrol('Style', 'pushbutton', 'String', 'Step Terrain', 'Position', [350, 550, 100, 30], 'Callback', @stepTerrainCallback);
+
+% Create label for terrain type
+terrainLabel = uicontrol('Style', 'text', 'String', strcat('Terrain: ', upper(p.terrainType)), 'Position', [650, 550, 100, 30]);
 
 %Animation plot loop -- Includes symplectic integration now.
 z1 = p.init;
@@ -94,7 +110,7 @@ tic %Start the clock
 while (ishandle(f))
     figData = get(f,'UserData');
     %%%% INTEGRATION %%%%
-    tnew = toc;
+    tnew = toc; % Add time offset
     dt = tnew - told;
     
     %Old velocity and position
@@ -110,7 +126,7 @@ while (ishandle(f))
     Kd = p.Kd_function(velocity_error);
    
     %Call RHS given old state
-    [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd);
+    [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd, position_error);
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     
@@ -124,7 +140,7 @@ while (ishandle(f))
 
     % Limit the angle of the second link
     max_angle = p.init(3) + p.init(3) / 2; % Maximum angle for the second link
-    if z2(3) > max_angle || z2(3) < -max_angle
+    if z2(3) < max_angle || z2(3) > -max_angle
         z2(3) = max_angle;
     end
 
@@ -133,12 +149,15 @@ while (ishandle(f))
     %%%%%%%%%%%%%%%%%%%%
 
     % Update the target based on the trajectory
-    if p.isActive
-        [p.xtarget, p.ytarget] = p.trajectory(tnew);
+    if p.isActive && ~p.isCompleted
+        [p.xtarget, p.ytarget, p.isCompleted] = p.trajectory(tnew);
         set(targetPt,'xData',p.xtarget); %Change the target point graphically.
         set(targetPt,'yData',p.ytarget);
     end
-
+    if p.isCompleted
+        p.isActive = false;
+        set(btn, 'String', 'Start Trajectory');
+    end
     %If there are new mouse click locations, then set those as the new
     %target.
     if ~isempty(figData.xtarget)
@@ -201,8 +220,48 @@ function startStopCallback(~, ~)
     p.isActive = ~p.isActive; % Alterna tra true e false
     if p.isActive
         set(btn, 'String', 'Stop Trajectory');
-    else
+        tic; % Restart the clock
+        p.isCompleted = false; % Reset isCompleted when starting
+        return;
+    end
+    if  ~p.isActive || p.isCompleted
         set(btn, 'String', 'Start Trajectory');
     end
+end
+
+function softTerrainCallback(~, ~)
+    p.terrainType = 'soft';
+    set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
+    [~, yt_final, ~] = p.trajectory(p.T);
+    set(terrainLine1, 'YData', [yt_final - p.terrainLine1(1), yt_final - p.terrainLine1(1)]); % Posizione della linea per terreno morbido
+    set(terrainLine2, 'YData', [yt_final, yt_final]); % Nascondi la seconda linea
+    set(terrainLine1, 'color', 'g');
+    set(terrainLine2, 'color', 'g');
+    set(terrainLine1, 'LineStyle', '--');
+    set(terrainLine2, 'LineStyle', '--');
+end
+
+function hardTerrainCallback(~, ~)
+    p.terrainType = 'hard';
+    set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
+    [~, yt_final, ~] = p.trajectory(p.T);
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(2), yt_final +  p.terrainLine1(2)]); % Posizione della linea per terreno duro
+    set(terrainLine2, 'YData', [yt_final, yt_final]); % Nascondi la seconda linea
+    set(terrainLine1, 'color', 'k');
+    set(terrainLine2, 'color', 'k');
+    set(terrainLine1, 'LineStyle', '-');
+    set(terrainLine2, 'LineStyle', '-');
+end
+
+function stepTerrainCallback(~, ~)
+    p.terrainType = 'step';
+    set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
+    [~, yt_final, ~] = p.trajectory(p.T);
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(3), yt_final + p.terrainLine1(3)]); % Prima parte della linea per gradino
+    set(terrainLine2, 'YData', [yt_final, yt_final]); % Seconda parte della linea per gradino
+    set(terrainLine1, 'color', 'b');
+    set(terrainLine2, 'color', 'b');
+    set(terrainLine1, 'LineStyle', '-.');
+    set(terrainLine2, 'LineStyle', '-.');
 end
 end

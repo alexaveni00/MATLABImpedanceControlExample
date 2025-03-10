@@ -31,15 +31,13 @@ rederive = false;
 run('constants.m');
 
 %Initial conditions: Il primo parametro risulta sfasato di +90 gradi
-p.init = [3/4*pi    0.0    pi/2 0.0];
+p.init = [-3/4*pi    0.0    -pi/2 0.0];
 
 %%%%%%%% Control Parameters %%%%%%%%
 p.Kp_min = Kp_min;
 p.Kp_max = Kp_max;
 p.Kd_min = Kd_min;
 p.Kd_max = Kd_max;
-p.gamma_p = gamma_p;
-p.gamma_d = gamma_d;
 
 p.g = 9.81;
 p.m1 = 1; %Mass of link 1.
@@ -58,8 +56,8 @@ p.Fx = 0;
 p.Fy = 0;
 
 %Controller Gains
-p.Kp_function = @(position_error) p.Kp_min + (p.Kp_max - p.Kp_min) * (1 - exp(-p.gamma_p * position_error));
-p.Kd_function = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-p.gamma_d * velocity_error));
+p.Kp_function = @(position_error) p.Kp_min + (p.Kp_max - p.Kp_min) * (1 - exp(-position_error));
+p.Kd_function = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-velocity_error));
 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
@@ -67,7 +65,10 @@ p.ytarget = y0;
 
 p.T = 4; %Period of the trajectory
 %%%%%%%% Define Trajectory %%%%%%%%
+p.terrainType = 'hard';
 p.isActive = false;
+p.isCompleted = false;
+p.terrainLine1 = [0.125; 0; 0.2];
 p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T);
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
 
