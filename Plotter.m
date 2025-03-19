@@ -117,16 +117,19 @@ while (ishandle(f))
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
 
-    % Calculate position and velocity errors
+    % Calculate position error, velocity error and force of interaction
     position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0
-    
+   
+    % Calcola la forza di reazione del terreno
+    force_contact = calculateTerrainReactionForce(figData.yend, yt_final, p.terrainType, p);
+
     % Calculate Kp and Kd values
-    Kp = p.Kp_function(position_error);
-    Kd = p.Kd_function(velocity_error);
+    [Kp, p.P, p.theta] = EstimateParamsRLS(force_contact, position_error, p);
+    Kd = max(p.Kd_min, min(p.alpha * Kp, p.Kd_max));
    
     %Call RHS given old state
-    [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd, position_error);
+    [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd);
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     
@@ -233,8 +236,8 @@ function softTerrainCallback(~, ~)
     p.terrainType = 'soft';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
     [~, yt_final, ~] = p.trajectory(p.T);
-    set(terrainLine1, 'YData', [yt_final - p.terrainLine1(1), yt_final - p.terrainLine1(1)]); % Posizione della linea per terreno morbido
-    set(terrainLine2, 'YData', [yt_final, yt_final]); % Nascondi la seconda linea
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(1), yt_final + p.terrainLine1(1)]); % Nascondi la seconda linea
+    set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno morbido
     set(terrainLine1, 'color', 'g');
     set(terrainLine2, 'color', 'g');
     set(terrainLine1, 'LineStyle', '--');
@@ -245,8 +248,8 @@ function hardTerrainCallback(~, ~)
     p.terrainType = 'hard';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
     [~, yt_final, ~] = p.trajectory(p.T);
-    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(2), yt_final +  p.terrainLine1(2)]); % Posizione della linea per terreno duro
-    set(terrainLine2, 'YData', [yt_final, yt_final]); % Nascondi la seconda linea
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(2), yt_final + p.terrainLine1(2)]); % Nascondi la seconda linea
+    set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno duro
     set(terrainLine1, 'color', 'k');
     set(terrainLine2, 'color', 'k');
     set(terrainLine1, 'LineStyle', '-');
@@ -257,11 +260,32 @@ function stepTerrainCallback(~, ~)
     p.terrainType = 'step';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
     [~, yt_final, ~] = p.trajectory(p.T);
-    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(3), yt_final + p.terrainLine1(3)]); % Prima parte della linea per gradino
-    set(terrainLine2, 'YData', [yt_final, yt_final]); % Seconda parte della linea per gradino
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(3), yt_final + p.terrainLine1(3)]); % Seconda parte della linea per gradino
+    set(terrainLine2, 'YData', [yt_final, yt_final]); % Prima parte della linea per gradino
     set(terrainLine1, 'color', 'b');
     set(terrainLine2, 'color', 'b');
     set(terrainLine1, 'LineStyle', '-.');
     set(terrainLine2, 'LineStyle', '-.');
 end
+function force_contact = calculateTerrainReactionForce(yend, yt_final, terrainType, p)
+    % Calcola la forza di reazione del terreno in base al tipo di terreno e alle caratteristiche fisiche del braccio
+    switch terrainType
+        case 'soft'
+            stiffness = 100; % Rigidità del terreno morbido
+        case 'hard'
+            stiffness = 1000; % Rigidità del terreno duro
+        case 'step'
+            stiffness = 500; % Rigidità del gradino
+        otherwise
+            stiffness = 100; % Default
+    end
+    
+    % Calcola la forza di reazione del terreno
+    if yend <= yt_final
+        force_contact = stiffness * (yt_final - yend); % Forza di contatto proporzionale alla penetrazione nel terreno
+    else
+        force_contact = 0;
+    end
 end
+end
+

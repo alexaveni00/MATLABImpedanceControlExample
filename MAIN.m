@@ -40,8 +40,8 @@ p.Kd_min = Kd_min;
 p.Kd_max = Kd_max;
 
 p.g = 9.81;
-p.m1 = 1; %Mass of link 1.
-p.m2 = 1; %Mass of link 2.
+p.m1 = 1.5; %Mass of link 1.
+p.m2 = 1.5; %Mass of link 2.
 p.l1 = 1; %Total length of link 1.
 p.l2 = 1; %Total length of link 2.
 p.d1 = p.l1/2; %Center of mass distance along link 1 from the fixed joint.
@@ -55,9 +55,12 @@ y0 = endZ(2);
 p.Fx = 0;
 p.Fy = 0;
 
-%Controller Gains
-p.Kp_function = @(position_error) p.Kp_min + (p.Kp_max - p.Kp_min) * (1 - exp(-position_error));
-p.Kd_function = @(velocity_error) p.Kd_min + (p.Kd_max - p.Kd_min) * (1 - exp(-velocity_error));
+% Inizializzazione dei parametri RLS
+p.theta = [p.Kd_min; 0]; % Vettore dei parametri stimati (Kp e un offset)
+p.P = eye(2) * 1000; % Matrice di covarianza iniziale
+p.lambda = 0.95; % Fattore di dimenticanza
+p.alpha = 0.2; %Learning rate for the sRLS algorithm
+p.dt = 0.001; %Intervallo di campionamento
 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
@@ -68,8 +71,7 @@ p.T = 4; %Period of the trajectory
 p.terrainType = 'hard';
 p.isActive = false;
 p.isCompleted = false;
-p.terrainLine1 = [0.125; 0; 0.2];
-p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T);
+p.terrainLine1 = [-0.125; 0; 0.2];
+p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T, p.terrainType);
+
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
-
-
