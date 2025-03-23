@@ -39,9 +39,9 @@ p.Kp_max = Kp_max;
 p.Kd_min = Kd_min;
 p.Kd_max = Kd_max;
 
-p.g = 9.81;
-p.m1 = 1.5; %Mass of link 1.
-p.m2 = 1.5; %Mass of link 2.
+p.g = g;
+p.m1 = m1; %Mass of link 1.
+p.m2 = m2; %Mass of link 2.
 p.l1 = l1; %Total length of link 1.
 p.l2 = l2; %Total length of link 2.
 p.d1 = p.l1/2; %Center of mass distance along link 1 from the fixed joint.
@@ -55,7 +55,7 @@ p.Fx = 0;
 p.Fy = 0;
 
 % Inizializzazione dei parametri RLS
-p.theta = [p.Kd_min; 0]; % Vettore dei parametri stimati (Kp e un offset)
+p.theta = [p.Kp_min; 0]; % Vettore dei parametri stimati (Kp e un offset)
 p.P = eye(2) * 1000; % Matrice di covarianza iniziale
 p.lambda = 0.95; % Fattore di dimenticanza
 p.alpha = 0.2; %Learning rate for the sRLS algorithm
@@ -64,17 +64,18 @@ p.dt = 0.001; %Intervallo di campionamento
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
 p.ytarget = y0;
-
+p.x0 = x0; %Initial position of the end effector in world space.
+p.y0 = y0; %Initial position of the end effector in world space.
 p.T = 4; %Period of the trajectory
 %%%%%%%% Define Trajectory %%%%%%%%
 
 % TERRAIN PARAMS
 p.terrainParams = terrainParams;
 
-p.terrainType = 'hard';
-p.isActive = false;
-p.isCompleted = false;
-p.terrainLine1 = [-0.125; 0; 0.2];
-p.trajectory = @(t, terrainType) DefineTrajectory(t, x0, y0, p.T, p.terrainType);
+p.terrainType = 'hard'; %Tipo di terreno iniziale
+p.isActive = false; %Determina se il robot è attivo o meno
+p.isCompleted = false; %Determina se il robot ha completato la traiettoria
+p.terrainLine1 = terrainLine1; %Altezza del terreno
+p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T, p.terrainType);
 
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
