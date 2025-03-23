@@ -63,8 +63,11 @@ kdText = text(3, -4.4, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 posErrorText = text(0.6,-3.6, 'Pos Error: 0.00 m', 'FontSize', 18, 'Color', 'g');
 velErrorText = text(0.6,-4.0, 'Vel Error: 0.00 m/s', 'FontSize', 18, 'Color', 'k');
 
+% Esempio di indicatore testuale visivo della forza di contatto:
+forceText = text(-3.2, -2.8, 'Force: 0.00 N', 'FontSize', 18, 'Color', 'r');
+
 %Target Pt.
-targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',18);
+targetPt = plot(p.xtarget,p.ytarget,'.r','MarkerSize',18);
 
 % Calcola la posizione finale della traiettoria
 [~, yt_final,~] = p.trajectory(p.T);
@@ -120,14 +123,25 @@ while (ishandle(f))
     % Calculate position error, velocity error and force of interaction
     position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0
-   
-    % Calcola la forza di reazione del terreno
-    force_contact = calculateTerrainReactionForce(figData.yend, yt_final, p.terrainType, p);
 
-    % Calculate Kp and Kd values
-    [Kp, p.P, p.theta] = EstimateParamsRLS(force_contact, position_error, p);
+    % Verifica se l'end-effector è in contatto col terreno
+    disp(abs(figData.yend - p.terrainParams.y_surface));
+if isempty(figData.yend) || abs(figData.yend - p.terrainParams.y_surface) <= 0.01
+    % C'è contatto: uso la forza di contatto calcolata
+    force_contact = ComputeContactForce(figData.yend, vold(2), p.terrainType, p.terrainParams);
+
+    % Aggiorna la stima SOLO se c'è effettivamente contatto
+    [Kp, p.P, p.theta] = EstimateStiffness_IIR_RLS(force_contact, position_error, p);
+else
+    % Nessun contatto: non aggiornare la stima
+    force_contact = 0;
+    Kp = p.Kp_min; % puoi usare il minimo come valore di default o l'ultimo valore valido
+end
     Kd = max(p.Kd_min, min(p.alpha * Kp, p.Kd_max));
-   
+    
+    % All'interno del loop principale del tuo plotter aggiorna così:
+    set(forceText, 'string', strcat('Force: ', num2str(force_contact, '%.2f'), ' N'));
+
     %Call RHS given old state
     [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd);
     vinter1 = [zdot1(1),zdot1(3)];
@@ -153,7 +167,7 @@ while (ishandle(f))
 
     % Update the target based on the trajectory
     if p.isActive && ~p.isCompleted
-        [p.xtarget, p.ytarget, p.isCompleted] = p.trajectory(tnew);
+        [p.xtarget, p.ytarget, p.isCompleted] = p.trajectory(tnew, p.terrainType);
         set(targetPt,'xData',p.xtarget); %Change the target point graphically.
         set(targetPt,'yData',p.ytarget);
     end
@@ -177,13 +191,6 @@ while (ishandle(f))
     figData.xend = ra_e(1);
     figData.yend = ra_e(2);
     set(f,'UserData',figData);
-    
-    if ~isempty(figData.Fx)
-    p.Fx = figData.Fx;
-    end
-    if ~isempty(figData.Fy)
-    p.Fy = figData.Fy;
-    end
     
     tstar = told; %Get the time (used during this entire iteration)
     
@@ -215,8 +222,8 @@ while (ishandle(f))
     set(velErrorText, 'string', strcat('Vel Error: ', num2str(velocity_error, 2), ' m/s'));  % Velocity error display
     
     % Update Kp e Kd display
-    set(kpText, 'string', strcat('Kp: ', num2str(Kp, 2)));
-    set(kdText, 'string', strcat('Kd: ', num2str(Kd, 2)));
+    set(kpText, 'string', strcat('Kp: ', num2str(Kp, 3)));
+    set(kdText, 'string', strcat('Kd: ', num2str(Kd, 3)));
     drawnow;
 end
 function startStopCallback(~, ~)
@@ -235,7 +242,7 @@ end
 function softTerrainCallback(~, ~)
     p.terrainType = 'soft';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
-    [~, yt_final, ~] = p.trajectory(p.T);
+    [~, yt_final, ~] = p.trajectory(p.T, p.terrainType);
     set(terrainLine1, 'YData', [yt_final + p.terrainLine1(1), yt_final + p.terrainLine1(1)]); % Nascondi la seconda linea
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno morbido
     set(terrainLine1, 'color', 'g');
@@ -247,7 +254,7 @@ end
 function hardTerrainCallback(~, ~)
     p.terrainType = 'hard';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
-    [~, yt_final, ~] = p.trajectory(p.T);
+    [~, yt_final, ~] = p.trajectory(p.T, p.terrainType);
     set(terrainLine1, 'YData', [yt_final + p.terrainLine1(2), yt_final + p.terrainLine1(2)]); % Nascondi la seconda linea
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno duro
     set(terrainLine1, 'color', 'k');
@@ -259,33 +266,13 @@ end
 function stepTerrainCallback(~, ~)
     p.terrainType = 'step';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
-    [~, yt_final, ~] = p.trajectory(p.T);
+    [~, yt_final, ~] = p.trajectory(p.T, p.terrainType);
     set(terrainLine1, 'YData', [yt_final + p.terrainLine1(3), yt_final + p.terrainLine1(3)]); % Seconda parte della linea per gradino
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Prima parte della linea per gradino
     set(terrainLine1, 'color', 'b');
     set(terrainLine2, 'color', 'b');
     set(terrainLine1, 'LineStyle', '-.');
     set(terrainLine2, 'LineStyle', '-.');
-end
-function force_contact = calculateTerrainReactionForce(yend, yt_final, terrainType, p)
-    % Calcola la forza di reazione del terreno in base al tipo di terreno e alle caratteristiche fisiche del braccio
-    switch terrainType
-        case 'soft'
-            stiffness = 100; % Rigidità del terreno morbido
-        case 'hard'
-            stiffness = 1000; % Rigidità del terreno duro
-        case 'step'
-            stiffness = 500; % Rigidità del gradino
-        otherwise
-            stiffness = 100; % Default
-    end
-    
-    % Calcola la forza di reazione del terreno
-    if yend <= yt_final
-        force_contact = stiffness * (yt_final - yend); % Forza di contatto proporzionale alla penetrazione nel terreno
-    else
-        force_contact = 0;
-    end
 end
 end
 

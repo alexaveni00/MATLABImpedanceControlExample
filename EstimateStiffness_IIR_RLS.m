@@ -1,4 +1,4 @@
-function [Kp_est, P, theta, filtered_force, filtered_displacement] = EstimateStiffness_IIR_RLS(force_input, displacement_input, p)
+function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacement_input, p)
     % EstimateStiffness_IIR_RLS
     %
     % Questa funzione implementa un algoritmo di stima della rigidità (Kp)
@@ -25,54 +25,40 @@ function [Kp_est, P, theta, filtered_force, filtered_displacement] = EstimateSti
     dt = p.dt;
     lambda = p.lambda;
     P = p.P;
-    theta = p.theta;
+    theta = p.theta;  % attenzione: theta deve essere scalare!
     Kp_min = p.Kp_min;
     Kp_max = p.Kp_max;
-    %% Parametri filtro IIR
-    % Frequenza di taglio (cut-off frequency) = 10Hz
+
+    % Filtro IIR
     f_cutoff = 10; 
-    w_cutoff = 2*pi*f_cutoff; % pulsazione di taglio in rad/s
+    w_cutoff = 2*pi*f_cutoff;
     
-    % Definizione del filtro nel dominio continuo (Filtro passa-basso di primo ordine)
     num_continuous = [w_cutoff];
     den_continuous = [1 w_cutoff];
     
-    % Trasformazione bilineare al dominio discreto (metodo Tustin)
     [num_discrete, den_discrete] = bilinear(num_continuous, den_continuous, 1/dt);
     
-    % Inizializzazione stati filtro persistenti
     persistent force_state disp_state
     if isempty(force_state)
         force_state = zeros(max(length(den_discrete), length(num_discrete))-1,1);
         disp_state = zeros(max(length(den_discrete), length(num_discrete))-1,1);
     end
     
-    %% Applicazione filtro digitale IIR
     [filtered_force, force_state] = filter(num_discrete, den_discrete, force_input, force_state);
     [filtered_displacement, disp_state] = filter(num_discrete, den_discrete, displacement_input, disp_state);
-    
-    %% Algoritmo RLS
-    % Modello lineare da stimare:
-    % filtered_force ≈ Kp * filtered_displacement
-    
-    phi = filtered_displacement; % regressore (input)
-    y   = filtered_force;        % output (misura)
-    
-    % Guadagno di Kalman (aggiornamento RLS)
-    epsilon = 1e-6; % small regularization term
-    K_gain = (P * phi) / (lambda + phi' * P * phi + (eye(2) * epsilon));
-    
-    % Errore di predizione
+
+    % RLS (scalare)
+    phi = [filtered_displacement; 1]; % vettore delle features
+    y   = filtered_force;
+
+    epsilon = 1e-6;
+    K_gain = (P * phi) / (lambda + phi' * P * phi + epsilon);
+
     error_pred = y - phi' * theta;
-    
-    % Aggiornamento dei parametri (theta) stimati
+
     theta = theta + K_gain * error_pred;
-    
-    % Aggiornamento della matrice di covarianza (P)
     P = (P - K_gain * phi' * P) / lambda;
-    
-    % Valore stimato di rigidità Kp (evitando valori negativi)
+
+    % Stima finale Kp
     Kp_est = max(Kp_min, min(theta(1), Kp_max));
-    
-    end
-    
+end

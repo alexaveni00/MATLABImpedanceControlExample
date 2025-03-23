@@ -31,7 +31,7 @@ rederive = false;
 run('constants.m');
 
 %Initial conditions: Il primo parametro risulta sfasato di +90 gradi
-p.init = [-3/4*pi    0.0    -pi/2 0.0];
+p.init = init;
 
 %%%%%%%% Control Parameters %%%%%%%%
 p.Kp_min = Kp_min;
@@ -42,14 +42,13 @@ p.Kd_max = Kd_max;
 p.g = 9.81;
 p.m1 = 1.5; %Mass of link 1.
 p.m2 = 1.5; %Mass of link 2.
-p.l1 = 1; %Total length of link 1.
-p.l2 = 1; %Total length of link 2.
+p.l1 = l1; %Total length of link 1.
+p.l2 = l2; %Total length of link 2.
 p.d1 = p.l1/2; %Center of mass distance along link 1 from the fixed joint.
 p.d2 = p.l2/2; %Center of mass distance along link 2 from the fixed joint.
 p.I1 = 1/12*p.m1*p.l1^2; %Moment of inertia of link 1 about COM
 p.I2 = 1/12*p.m2*p.l2^2; %Moment of inertia of link 2 about COM
 
-endZ = ForwardKin(p.l1,p.l2,p.init(1),p.init(3));
 x0 = endZ(1); %End effector initial position in world frame.
 y0 = endZ(2);
 p.Fx = 0;
@@ -68,10 +67,14 @@ p.ytarget = y0;
 
 p.T = 4; %Period of the trajectory
 %%%%%%%% Define Trajectory %%%%%%%%
+
+% TERRAIN PARAMS
+p.terrainParams = terrainParams;
+
 p.terrainType = 'hard';
 p.isActive = false;
 p.isCompleted = false;
 p.terrainLine1 = [-0.125; 0; 0.2];
-p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T, p.terrainType);
+p.trajectory = @(t, terrainType) DefineTrajectory(t, x0, y0, p.T, p.terrainType);
 
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
