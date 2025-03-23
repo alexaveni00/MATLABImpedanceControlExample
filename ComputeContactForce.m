@@ -1,56 +1,56 @@
-function Fn = ComputeContactForce(y_effector, ydot_effector, terrainType, terrainParams)
-    % ComputeContactForce calcola la forza di contatto basata su un modello
-    % visco-elastico non lineare (Hunt-Crossley).
+function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrainType, terrainParams, m, g)
+    % ComputeContactForce - Calcola la forza di contatto usando il modello Hunt-Crossley
     %
     % INPUT:
-    %   y_effector    : altezza attuale dell'end-effector
-    %   ydot_effector : velocità verticale dell'end-effector (positiva verso il basso)
-    %   terrainType   : 'soft', 'hard', oppure 'step'
-    %   terrainParams : struttura con parametri del terreno (k, c, y_surface)
+    % y_end_effector: posizione verticale dell’end-effector [m]
+    % vy_end_effector: velocità verticale dell’end-effector [m/s]
+    % terrainType: tipo di terreno ('soft', 'hard')
+    % terrainParams: struttura con parametri k, c, n, y_surface, offset
+    % p: struttura dei parametri del robot (può contenere massa per la forza peso)
     %
     % OUTPUT:
-    %   Fn            : forza di contatto (positiva verso l'alto)
+    % F_contact: forza verticale risultante [N]
     
-        % Penetrazione dell'end-effector rispetto alla superficie
-        if (isempty(y_effector))
-            y_effector = terrainParams.y_surface;
-        end
-
-        % Parametri del terreno in base al tipo
-        switch terrainType
-            case 'soft'
-                k = terrainParams.soft.k;
-                c = terrainParams.soft.c;
-                n = terrainParams.soft.n;
-            case 'hard'
-                k = terrainParams.hard.k;
-                c = terrainParams.hard.c;
-                n = terrainParams.hard.n;
-            case 'step'
-                k = terrainParams.step.k;
-                c = terrainParams.step.c;
-                n = terrainParams.step.n;
-            otherwise
-                error('Unknown terrain type');
-        end
-        y_surface = terrainParams.y_surface;
-        penetration = max (0, y_surface - y_effector);
-        penetration_dot = -ydot_effector; 
+    persistent prev_penetration prev_force
     
-        if penetration == 0
-            Fn = 0;
-            return;
-        end
-        % Modello Hunt-Crossley
-        Fn_elastic = k * penetration^n;
-        Fn_damping = c * penetration^n * penetration_dot;
-    
-        Fn = Fn_elastic + Fn_damping;
-    
-        % Forza non può essere negativa
-        Fn = max(Fn, 0);
-        if isempty(Fn)
-            Fn = 0;
-        end
+    if isempty(prev_penetration)
+        prev_penetration = 0;
     end
+    if isempty(prev_force)
+        prev_force = 0;
+    end
+
+    % Estrai parametri del terreno
+    k = terrainParams.(terrainType).k;
+    c = terrainParams.(terrainType).c;
+    n = terrainParams.(terrainType).n;
+    y_surface = terrainParams.y_surface;
+    offset = terrainParams.(terrainType).offset; % Offset per attivare contatto leggero
+
+    % Forza peso (approssimazione con somma delle masse)
+    F_weight = m * g;
+
+    % Calcolo della penetrazione con offset
+    penetration = max(0, y_surface + offset - y_end_effector);
     
+    % Se penetrazione > 0 → c'è contatto
+    if penetration > 0
+        if penetration > prev_penetration
+            % Fase di caricamento (loading): modello Hunt-Crossley
+            F_elastic = k * penetration^n;
+            F_damping = c * penetration^n * vy_end_effector;
+            F_contact = F_elastic + F_damping + F_weight;
+            prev_force = F_contact;  % Salva per rilascio
+        else
+            % Fase di scarico (unloading): forza decrescente verso 0
+            relaxation_factor = 0.95;
+            F_contact = relaxation_factor * prev_force;
+            prev_force = F_contact;
+        end
+        prev_penetration = penetration;
+    else
+        F_contact = 0;
+        prev_penetration = 0;
+        prev_force = 0;
+    end
+end

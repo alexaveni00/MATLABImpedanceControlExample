@@ -9,17 +9,12 @@ function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacemen
     % INPUT:
     % force_input          - misura della forza esterna (N)
     % displacement_input   - misura dello spostamento del manipolatore (m)
-    % dt                   - intervallo di tempo di campionamento (s)
-    % lambda               - fattore di dimenticanza per RLS (0 < lambda <= 1)
-    % P                    - matrice di covarianza RLS (inizialmente alta)
-    % theta                - vettore dei parametri stimati iniziali
+    % p                    - struttura con i parametri del filtro e dell'algoritmo RLS
     %
     % OUTPUT:
     % Kp_est               - stima della rigidità calcolata (N/m)
     % P                    - matrice di covarianza aggiornata
     % theta                - vettore dei parametri aggiornato
-    % filtered_force       - forza filtrata attraverso IIR (N)
-    % filtered_displacement- spostamento filtrato attraverso IIR (m)
 
 
     dt = p.dt;
@@ -47,7 +42,7 @@ function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacemen
     [filtered_force, force_state] = filter(num_discrete, den_discrete, force_input, force_state);
     [filtered_displacement, disp_state] = filter(num_discrete, den_discrete, displacement_input, disp_state);
 
-    % RLS (scalare)
+    % RLS
     phi = [filtered_displacement; 1]; % vettore delle features
     y   = filtered_force;
 
