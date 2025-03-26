@@ -19,8 +19,6 @@ set(f,'WindowButtonMotionFcn','');
 
 figData.xtarget = [];
 figData.ytarget = [];
-figData.Fx = [];
-figData.Fy = [];
 figData.xend = [];
 figData.yend = [];
 figData.fig = f;
@@ -124,11 +122,20 @@ while (ishandle(f))
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0    
 
     % Calcolo della forza di contatto
-    force_contact = ComputeContactForce(figData.yend, vold(2), p.terrainType, p.terrainParams, p.m1 + p.m2, p.g);
+    if abs (figData.yend - p.terrainParams.y_surface) < 0.01
+        force_contact = ComputeContactForce(figData.yend, vold(2), p.terrainType, p.terrainParams, p.m1 + p.m2, p.g);
+        displacement = abs(p.terrainParams.y_surface - figData.yend);
+    else
+        force_contact = 0;
+        displacement = 0;
+    end
     set(forceText, 'string', strcat('Force: ', num2str(force_contact, '%.2f'), ' N'));
-    
+
     %Stima dei parametri di controllo
-    [Kp, p.P, p.theta] = EstimateStiffness_IIR_RLS(force_contact, position_error, p);
+    [Kp, p.P, p.theta] = EstimateStiffness_IIR_RLS(force_contact, displacement, p);
+    if Kp < p.Kp_min || Kp > p.Kp_max || isnan(Kp)
+        disp("⚠️ Kp "+ Kp + "fuori range, possibile instabilità nel segnale");
+    end
     Kd = max(p.Kd_min, min(p.alpha * Kp, p.Kd_max));
 
     %Call RHS given old state
@@ -156,7 +163,7 @@ while (ishandle(f))
 
     % Update the target based on the trajectory
     if p.isActive
-        [p.xtarget, p.ytarget] = DefineTrajectory(tnew, p.x0, p.y0, p.T, p.terrainType);
+        [p.xtarget, p.ytarget] = DefineTrajectory(tnew, p.x0, p.y0, p.T, p.terrainLine1.(p.terrainType));
         set(targetPt,'xData',p.xtarget); %Change the target point graphically.
         set(targetPt,'yData',p.ytarget);
     end
@@ -227,8 +234,9 @@ end
 function softTerrainCallback(~, ~)
     p.terrainType = 'soft';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
+    p.resetRLS = true; % Resetta i parametri RLS
     [~, yt_final] = p.trajectory(p.T);
-    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(1), yt_final + p.terrainLine1(1)]); % Nascondi la seconda linea
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1.soft, yt_final + p.terrainLine1.soft]); % Nascondi la seconda linea
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno morbido
     set(terrainLine1, 'color', 'g');
     set(terrainLine2, 'color', 'g');
@@ -240,7 +248,8 @@ function hardTerrainCallback(~, ~)
     p.terrainType = 'hard';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
     [~, yt_final] = p.trajectory(p.T);
-    set(terrainLine1, 'YData', [yt_final + p.terrainLine1(2), yt_final + p.terrainLine1(2)]); % Nascondi la seconda linea
+    p.resetRLS = true; % Resetta i parametri RLS
+    set(terrainLine1, 'YData', [yt_final + p.terrainLine1.hard, yt_final + p.terrainLine1.hard]); % Nascondi la seconda linea
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno duro
     set(terrainLine1, 'color', 'k');
     set(terrainLine2, 'color', 'k');

@@ -51,14 +51,12 @@ p.I2 = 1/12*p.m2*p.l2^2; %Moment of inertia of link 2 about COM
 
 x0 = endZ(1); %End effector initial position in world frame.
 y0 = endZ(2);
-p.Fx = 0;
-p.Fy = 0;
 
 % Inizializzazione dei parametri RLS
 p.theta = [p.Kp_min; 0]; % Vettore dei parametri stimati (Kp e un offset)
-p.P = eye(2) * 1000; % Matrice di covarianza iniziale
+p.P = 1000; % Matrice di covarianza iniziale
 p.lambda = 0.95; % Fattore di dimenticanza
-p.alpha = 0.2; %Learning rate for the sRLS algorithm
+p.alpha = 0.2; % Fattore di proporzionalità tra Kp e Kd
 p.dt = 0.001; %Intervallo di campionamento
 
 %Single target:
@@ -71,11 +69,11 @@ p.T = 4; %Period of the trajectory
 
 % TERRAIN PARAMS
 p.terrainParams = terrainParams;
-
+p.resetRLS = false; %Resetta i parametri RLS
 p.terrainType = 'hard'; %Tipo di terreno iniziale
 p.isActive = false; %Determina se il robot è attivo o meno
 p.isCompleted = false; %Determina se il robot ha completato la traiettoria
 p.terrainLine1 = terrainLine1; %Altezza del terreno
-p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T, p.terrainType);
+p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T, p.terrainLine1.(p.terrainType));
 
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.

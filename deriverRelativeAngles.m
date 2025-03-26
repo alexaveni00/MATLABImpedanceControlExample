@@ -9,7 +9,6 @@
 %Parameters symbolically.
 syms m1 m2 I1 I2 g l1 l2 d1 d2 th1 th2 thdot1 thdot2 thdotdot1 thdotdot2 T1 T2 real
 
-run('constants.m');
 %Unit vectors, cartesian
 i = [1 0 0]';
 j = [0 1 0]';
