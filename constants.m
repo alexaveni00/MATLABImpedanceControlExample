@@ -1,20 +1,22 @@
-Kp_min = 150;  % Minimo per Kp
-Kp_max = 375; % Massimo per Kp
+Kp_min = 100;  % Minimo per Kp
+Kp_max = 500; % Massimo per Kp
 Kd_min = 25;  % Minimo per Kd
 Kd_max = 100;   % Massimo per Kd
 
 terrainParams.soft.k = 500;     % N/m^(3/2)
 terrainParams.soft.c = 150;     % N·s/m^(5/2)
-terrainParams.soft.offset = 0.05;
+terrainParams.soft.offset = 0.05; % Offset per attivare contatto leggero con terreno soft
 
 terrainParams.hard.k = 1500;    % N/m^(3/2)
 terrainParams.hard.c = 200;     % N·s/m^(5/2)
-terrainParams.hard.offset = 0.001;
-
+terrainParams.hard.offset = 0.001; % Offset per attivare contatto leggero con terreno hard
+ 
 terrainParams.soft.n = 1.5;
 terrainParams.hard.n = 1.5;
 
-terrainLine1 = [-0.125; 0; 0.2];
+terrainLine1.soft = -0.1;
+terrainLine1.hard = 0;
+
 init = [-3/4*pi    0.0    -pi/2 0.0];
 l1 = 1; 
 l2 = 1;

@@ -1,58 +1,46 @@
 function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacement_input, p)
     % EstimateStiffness_IIR_RLS
-    %
-    % Questa funzione implementa un algoritmo di stima della rigidità (Kp)
-    % utilizzando un filtro digitale IIR progettato nel dominio continuo,
-    % trasformato al dominio discreto tramite trasformazione bilineare (Tustin)
-    % e, infine, utilizzando un algoritmo di Recursive Least Squares (RLS).
-    %
-    % INPUT:
-    % force_input          - misura della forza esterna (N)
-    % displacement_input   - misura dello spostamento del manipolatore (m)
-    % p                    - struttura con i parametri del filtro e dell'algoritmo RLS
-    %
-    % OUTPUT:
-    % Kp_est               - stima della rigidità calcolata (N/m)
-    % P                    - matrice di covarianza aggiornata
-    % theta                - vettore dei parametri aggiornato
+    % Usa oggetti System di MATLAB per stimare la rigidità (Kp)
+    % tramite filtro IIR e Recursive Least Squares (RLS)
 
-
-    dt = p.dt;
-    lambda = p.lambda;
-    P = p.P;
-    theta = p.theta;  % attenzione: theta deve essere scalare!
+    % Limiti di Kp
     Kp_min = p.Kp_min;
     Kp_max = p.Kp_max;
 
-    % Filtro IIR
-    f_cutoff = 10; 
-    w_cutoff = 2*pi*f_cutoff;
-    
-    num_continuous = [w_cutoff];
-    den_continuous = [1 w_cutoff];
-    
-    [num_discrete, den_discrete] = bilinear(num_continuous, den_continuous, 1/dt);
-    
-    persistent force_state disp_state
-    if isempty(force_state)
-        force_state = zeros(max(length(den_discrete), length(num_discrete))-1,1);
-        disp_state = zeros(max(length(den_discrete), length(num_discrete))-1,1);
+    % === Filtro IIR ===
+    persistent iirForceFilter iirDispFilter
+    if isempty(iirForceFilter)
+        f_cutoff = 10; % Hz
+        w_cutoff = 2*pi*f_cutoff;
+        [b, a] = bilinear([w_cutoff], [1 w_cutoff], 1/p.dt);
+        iirForceFilter = dsp.IIRFilter('Numerator', b, 'Denominator', a);
+        iirDispFilter  = dsp.IIRFilter('Numerator', b, 'Denominator', a);
     end
-    
-    [filtered_force, force_state] = filter(num_discrete, den_discrete, force_input, force_state);
-    [filtered_displacement, disp_state] = filter(num_discrete, den_discrete, displacement_input, disp_state);
 
-    % RLS
-    phi = [filtered_displacement; 1]; % vettore delle features
-    y   = filtered_force;
+    % Applica il filtro
+    filtered_force = iirForceFilter(force_input);
+    filtered_disp  = iirDispFilter(displacement_input);
 
-    epsilon = 1e-6;
-    K_gain = (P * phi) / (lambda + phi' * P * phi + epsilon);
+    % === RLS nativo ===
+    persistent rls
+    if isempty(rls) || p.resetRLS
+        rls = recursiveLS(2, 'ForgettingFactor', 0.98);
+        rls.InitialParameters = p.theta; % Inizializza i parametri
+        rls.InitialParameterCovariance = p.P;
+        p.resetRLS = false;
+    end
 
-    error_pred = y - phi' * theta;
+    % Costruisci vettore regressore (phi) 1x2
+    phi = [filtered_disp, 1];   % primo elemento: regressore (disp), secondo: offset
 
-    theta = theta + K_gain * error_pred;
-    P = (P - K_gain * phi' * P) / lambda;
+    phi = reshape(phi, 1, []);
+
+    % Applica stima RLS con l’oggetto System
+    rls(filtered_force, phi);
+
+    % Estrai parametri stimati
+    theta = rls.Parameters; % [Kp; offset]
+    P = rls.ParameterCovariance;
 
     % Stima finale Kp
     Kp_est = max(Kp_min, min(theta(1), Kp_max));

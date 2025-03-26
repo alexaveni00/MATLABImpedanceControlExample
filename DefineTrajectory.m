@@ -13,13 +13,7 @@
 % yt: y position of the end effector
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [xt, yt] = DefineTrajectory(t, x0, y0, T, terrainType)
-    switch terrainType
-        case 'soft'
-            stepHeight = -0.125;
-        case 'hard'
-            stepHeight = 0;
-    end
+function [xt, yt] = DefineTrajectory(t, x0, y0, T, stepHeight)
     % Define the radius of the semicircle
     r = 0.7;
     % Calculate the phase of the trajectory
