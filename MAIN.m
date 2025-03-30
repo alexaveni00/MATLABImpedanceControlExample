@@ -69,7 +69,6 @@ p.T = 4; %Period of the trajectory
 
 % TERRAIN PARAMS
 p.terrainParams = terrainParams;
-p.resetRLS = false; %Resetta i parametri RLS
 p.terrainType = 'hard'; %Tipo di terreno iniziale
 p.isActive = false; %Determina se il robot è attivo o meno
 p.isCompleted = false; %Determina se il robot ha completato la traiettoria

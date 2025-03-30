@@ -1,4 +1,4 @@
-function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrainType, terrainParams, m, g)
+function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrainType, terrainParams)
     % ComputeContactForce - Calcola la forza di contatto usando il modello Hunt-Crossley
     %
     % INPUT:
@@ -6,7 +6,6 @@ function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrai
     % vy_end_effector: velocità verticale dell’end-effector [m/s]
     % terrainType: tipo di terreno ('soft', 'hard')
     % terrainParams: struttura con parametri k, c, n, y_surface, offset
-    % p: struttura dei parametri del robot (può contenere massa per la forza peso)
     %
     % OUTPUT:
     % F_contact: forza verticale risultante [N]
@@ -27,9 +26,6 @@ function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrai
     y_surface = terrainParams.y_surface;
     offset = terrainParams.(terrainType).offset; % Offset per attivare contatto leggero
 
-    % Forza peso (approssimazione con somma delle masse)
-    F_weight = m * g;
-
     % Calcolo della penetrazione con offset
     penetration = max(0, y_surface + offset - y_end_effector);
     
@@ -39,7 +35,7 @@ function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrai
             % Fase di caricamento (loading): modello Hunt-Crossley
             F_elastic = k * penetration^n;
             F_damping = c * penetration^n * vy_end_effector;
-            F_contact = F_elastic + F_damping + F_weight;
+            F_contact = F_elastic + F_damping;
             prev_force = F_contact;  % Salva per rilascio
         else
             % Fase di scarico (unloading): forza decrescente verso 0
