@@ -122,8 +122,8 @@ while (ishandle(f))
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0    
 
     % Calcolo della forza di contatto
-    if abs (figData.yend - p.terrainParams.y_surface) < 0.01
-        force_contact = ComputeContactForce(figData.yend, vold(2), p.terrainType, p.terrainParams, p.m1 + p.m2, p.g);
+    if abs(figData.yend - p.terrainParams.y_surface) < 0.1 % Se l'end effector è vicino al terreno
+        force_contact = ComputeContactForce(figData.yend, vold(2), p.terrainType, p.terrainParams);
         displacement = abs(p.terrainParams.y_surface - figData.yend);
     else
         force_contact = 0;
@@ -136,7 +136,7 @@ while (ishandle(f))
     if Kp < p.Kp_min || Kp > p.Kp_max || isnan(Kp)
         disp("⚠️ Kp "+ Kp + "fuori range, possibile instabilità nel segnale");
     end
-    Kd = max(p.Kd_min, min(p.alpha * Kp, p.Kd_max));
+    Kd = max(p.Kd_min, p.alpha * Kp);
 
     %Call RHS given old state
     [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd);
@@ -234,7 +234,6 @@ end
 function softTerrainCallback(~, ~)
     p.terrainType = 'soft';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
-    p.resetRLS = true; % Resetta i parametri RLS
     [~, yt_final] = p.trajectory(p.T);
     set(terrainLine1, 'YData', [yt_final + p.terrainLine1.soft, yt_final + p.terrainLine1.soft]); % Nascondi la seconda linea
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno morbido
@@ -248,7 +247,6 @@ function hardTerrainCallback(~, ~)
     p.terrainType = 'hard';
     set(terrainLabel, 'String', strcat('Terrain: ', upper(p.terrainType)));
     [~, yt_final] = p.trajectory(p.T);
-    p.resetRLS = true; % Resetta i parametri RLS
     set(terrainLine1, 'YData', [yt_final + p.terrainLine1.hard, yt_final + p.terrainLine1.hard]); % Nascondi la seconda linea
     set(terrainLine2, 'YData', [yt_final, yt_final]); % Posizione della linea per terreno duro
     set(terrainLine1, 'color', 'k');

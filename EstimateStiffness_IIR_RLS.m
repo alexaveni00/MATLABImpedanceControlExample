@@ -23,11 +23,10 @@ function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacemen
 
     % === RLS nativo ===
     persistent rls
-    if isempty(rls) || p.resetRLS
+    if isempty(rls)
         rls = recursiveLS(2, 'ForgettingFactor', 0.98);
         rls.InitialParameters = p.theta; % Inizializza i parametri
         rls.InitialParameterCovariance = p.P;
-        p.resetRLS = false;
     end
 
     % Costruisci vettore regressore (phi) 1x2
