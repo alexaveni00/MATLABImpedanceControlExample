@@ -71,7 +71,6 @@ p.T = 4; %Period of the trajectory
 p.terrainParams = terrainParams;
 p.terrainType = 'hard'; %Tipo di terreno iniziale
 p.isActive = false; %Determina se il robot è attivo o meno
-p.isCompleted = false; %Determina se il robot ha completato la traiettoria
 p.terrainLine1 = terrainLine1; %Altezza del terreno
 p.trajectory = @(t) DefineTrajectory(t, x0, y0, p.T, p.terrainLine1.(p.terrainType));
 

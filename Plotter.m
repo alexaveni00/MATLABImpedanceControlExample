@@ -121,7 +121,7 @@ while (ishandle(f))
     position_error = norm([p.xtarget - figData.xend, p.ytarget - figData.yend]);  % Position error
     velocity_error = norm([0 - (z1(2)), 0 - (z1(4))]);  % Assuming desired velocity is 0    
 
-    % Calcolo della forza di contatto
+    % Calcolo della forza di contatto e dello spostamento
     if abs(figData.yend - p.terrainParams.y_surface) < 0.1 % Se l'end effector è vicino al terreno
         force_contact = ComputeContactForce(figData.yend, vold(2), p.terrainType, p.terrainParams);
         displacement = abs(p.terrainParams.y_surface - figData.yend);
@@ -132,14 +132,11 @@ while (ishandle(f))
     set(forceText, 'string', strcat('Force: ', num2str(force_contact, '%.2f'), ' N'));
 
     %Stima dei parametri di controllo
-    [Kp, p.P, p.theta] = EstimateStiffness_IIR_RLS(force_contact, displacement, p);
-    if Kp < p.Kp_min || Kp > p.Kp_max || isnan(Kp)
-        disp("⚠️ Kp "+ Kp + "fuori range, possibile instabilità nel segnale");
-    end
-    Kd = max(p.Kd_min, p.alpha * Kp);
+    [Kp, p.P] = EstimateStiffness_IIR_RLS(force_contact, displacement, p);
+    Kd = max(p.Kd_min, min (p.alpha * Kp, p.Kd_max)); %Limita Kd in base a Kp
 
     %Call RHS given old state
-    [zdot1, T1, T2] = FullDyn(tnew,z1,p, Kp, Kd);
+    [zdot1, T1, T2] = FullDyn(z1,p, Kp, Kd);
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     
@@ -223,10 +220,9 @@ function startStopCallback(~, ~)
     if p.isActive
         set(btn, 'String', 'Stop Trajectory');
         tic; % Restart the clock
-        p.isCompleted = false; % Reset isCompleted when starting
         return;
     end
-    if  ~p.isActive || p.isCompleted
+    if  ~p.isActive
         set(btn, 'String', 'Start Trajectory');
     end
 end

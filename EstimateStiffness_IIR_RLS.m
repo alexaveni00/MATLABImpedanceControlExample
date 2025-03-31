@@ -1,4 +1,4 @@
-function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacement_input, p)
+function [Kp_est, P] = EstimateStiffness_IIR_RLS(force_input, displacement_input, p)
     % EstimateStiffness_IIR_RLS
     % Usa oggetti System di MATLAB per stimare la rigidità (Kp)
     % tramite filtro IIR e Recursive Least Squares (RLS)
@@ -24,7 +24,7 @@ function [Kp_est, P, theta] = EstimateStiffness_IIR_RLS(force_input, displacemen
     % === RLS nativo ===
     persistent rls
     if isempty(rls)
-        rls = recursiveLS(2, 'ForgettingFactor', 0.98);
+        rls = recursiveLS(2, 'ForgettingFactor', p.lambda);
         rls.InitialParameters = p.theta; % Inizializza i parametri
         rls.InitialParameterCovariance = p.P;
     end

@@ -13,7 +13,6 @@ terrainParams.hard.c = 200;
 terrainParams.hard.n = 1.5;
 terrainParams.hard.offset = 0.001; % Offset per attivare contatto leggero con terreno hard
 
- 
 terrainLine1.soft = -0.1;
 terrainLine1.hard = 0;
 

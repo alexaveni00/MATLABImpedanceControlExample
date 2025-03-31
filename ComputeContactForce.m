@@ -10,43 +10,44 @@ function F_contact = ComputeContactForce(y_end_effector, vy_end_effector, terrai
     % OUTPUT:
     % F_contact: forza verticale risultante [N]
     
-    persistent prev_penetration prev_force
-    
+    persistent prev_penetration prev_F_damping
+
     if isempty(prev_penetration)
         prev_penetration = 0;
     end
-    if isempty(prev_force)
-        prev_force = 0;
+    if isempty(prev_F_damping)
+        prev_F_damping = 0;
     end
 
-    % Estrai parametri del terreno
+    % Estrai parametri
     k = terrainParams.(terrainType).k;
     c = terrainParams.(terrainType).c;
     n = terrainParams.(terrainType).n;
     y_surface = terrainParams.y_surface;
-    offset = terrainParams.(terrainType).offset; % Offset per attivare contatto leggero
+    offset = terrainParams.(terrainType).offset;
 
-    % Calcolo della penetrazione con offset
+    % Penetrazione
     penetration = max(0, y_surface + offset - y_end_effector);
-    
-    % Se penetrazione > 0 → c'è contatto
+
     if penetration > 0
-        if penetration > prev_penetration
-            % Fase di caricamento (loading): modello Hunt-Crossley
-            F_elastic = k * penetration^n;
+        F_elastic = k * penetration^n;
+
+        if penetration > prev_penetration || vy_end_effector ~= 0
+            % Carico: penetrazione aumenta o il braccio scende
             F_damping = c * penetration^n * vy_end_effector;
-            F_contact = F_elastic + F_damping;
-            prev_force = F_contact;  % Salva per rilascio
         else
-            % Fase di scarico (unloading): forza decrescente verso 0
+            % Scarico: rilassamento della forza di smorzamento
             relaxation_factor = 0.95;
-            F_contact = relaxation_factor * prev_force;
-            prev_force = F_contact;
+            F_damping = relaxation_factor * prev_F_damping;
         end
+
+        F_contact = F_elastic + F_damping;
+        prev_F_damping = F_damping;
         prev_penetration = penetration;
     else
+        % Nessun contatto
         F_contact = 0;
         prev_penetration = 0;
-        prev_force = 0;
+        prev_F_damping = 0;
     end
 end
