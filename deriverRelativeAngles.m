@@ -7,7 +7,7 @@
 %ANGLE RELATIVE TO THE UPPER ARM ANGLE.
 
 %Parameters symbolically.
-syms m1 m2 I1 I2 g l1 l2 d1 d2 th1 th2 thdot1 thdot2 thdotdot1 thdotdot2 er1 er2 eth1 eth2 T1 T2 real
+syms m1 m2 I1 I2 g l1 l2 d1 d2 th1 th2 thdot1 thdot2 thdotdot1 thdotdot2 T1 T2 real
 
 %Unit vectors, cartesian
 i = [1 0 0]';
@@ -77,36 +77,18 @@ T1Eq = simplify(subs(solve(eqn1,T1),T2,T2Eq));
 matlabFunction(T1Eq, 'file', 'GravityCompT1');
 matlabFunction(T2Eq, 'file', 'GravityCompT2');
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%% Impedance control?   %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% Impedence Control %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Jacobian relating end effector velocity to joint space vel
-% ie Ve = J*qv
-
-J = jacobian(Ve,{thdot1 thdot2});
+J = jacobian(Ve,[thdot1,thdot2]);
 
 syms Kp Kd xt yt xdott ydott real
 
-zt = [xt yt 0 ]'; %Trajectory tracked
-ztdot = [xdott ydott 0]'; %velocity tracked
+zt = [xt yt 0 ]'; 
+ztdot = [xdott ydott 0]';
 
-Ta = J'*(Kp*(zt - ra_e) + Kd*(ztdot - J*[thdot1 thdot2]'));
+Ta = J' * (Kp * (zt - ra_e) + Kd * (ztdot - J * [thdot1 thdot2]'));
 
-matlabFunction(Ta, 'file', 'ImpedenceControl');
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%% Energy eqns %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%Turned this off after making sure stuff worked:
-
-% syms k1 k2 real
-% 
-% PE = g*dot(ra_c2,j)*m2 + g*dot(ra_c1,j)*m1;
-% KE = 1/2*I1*thdot1^2 + 1/2*I2*(thdot2+thdot1)^2 + 1/2*m1*dot(Vc1,Vc1) + 1/2*m2*dot(Vc2,Vc2);
-% 
-% Etot = PE + KE;
-% 
-% matlabFunction(Etot, 'file', 'TotEnergy');
+matlabFunction(Ta, 'file', 'ImpedanceControl');
 
