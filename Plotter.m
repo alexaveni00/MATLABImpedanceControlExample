@@ -19,7 +19,7 @@ close all
 
 %Name the whole window and define the mouse callback function
 f = figure;
-set(f,'WindowButtonMotionFcn','','WindowButtonDownFcn',@ClickDown,'WindowButtonUpFcn',@ClickUp,'KeyPressFc',@KeyPress);
+set(f,'WindowButtonMotionFcn','','WindowButtonDownFcn',@ClickDown,'WindowButtonUpFcn',@ClickUp);
 
 figData.xtarget = [];
 figData.ytarget = [];
@@ -68,6 +68,15 @@ hold off
 set(f, 'units', 'inches', 'position', [5 5 10 9])
 set(f,'Color',[1,1,1]);
 
+% Centrare la finestra e impostare dimensioni 800x800
+screenSize = get(0, 'ScreenSize');
+figWidth = 800;
+figHeight = 600;
+figX = (screenSize(3) - figWidth) / 2;
+figY = (screenSize(4) - figHeight) / 2;
+set(f, 'units', 'pixels', 'position', [figX, figY, figWidth, figHeight]);
+set(f,'Color',[1,1,1]);
+
 % Turn the axis off
 ax = get(f,'Children');
 set(ax,'Visible','off');
@@ -79,44 +88,69 @@ told = 0;
 set(f,'UserData',figData);
 
 tic %Start the clock
+% === PARAMETRI TRAIETTORIA SEMICIRCONFERENZA ===
+autoTrajectory = true; % Imposta a true per attivare la traiettoria automatica
+raggio = 0.7; % raggio della semicirconferenza
+vel_angolare = pi/2; % velocità angolare [rad/s]
+
+% Centro della semicirconferenza (puoi cambiare questi valori)
+x_c = p.xtarget - 0.5; % sposta a sinistra
+
+y_c = p.ytarget - 0.5; % sposta in basso
+
+% Tracker per Kp, Kd e velocità end-effector
+kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
+kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
+velText = text(0.6, -4.0, 'Vel: [0.00, 0.00]', 'FontSize', 18, 'Color', 'g');
+
 while (ishandle(f))
     figData = get(f,'UserData');
     %%%% INTEGRATION %%%%
     tnew = toc;
     dt = tnew - told;
-    
-    %Old velocity and position
-    xold = [z1(1),z1(3)];
-    vold = [z1(2),z1(4)];
-   
-    %Call RHS given old state
-    [zdot1, T1, T2] = FullDyn(tnew,z1,p);
-    vinter1 = [zdot1(1),zdot1(3)];
-    ainter = [zdot1(2),zdot1(4)];
-    
-    vinter2 = vold + ainter*dt; %Update velocity based on old RHS call
-    
-    %Update position.
-    xnew = xold + vinter2*dt;
-    vnew = (xnew-xold)/dt;
-    
-    z2 = [xnew(1) vnew(1) xnew(2) vnew(2)];
 
-    z1 = z2;
-    told = tnew;
-    %%%%%%%%%%%%%%%%%%%%
+    % === TRAIETTORIA AUTOMATICA ===
+    if autoTrajectory
+        % Parametrizzazione: da pi a 0 (semicerchio "in avanti")
+        % Inverti la direzione della traiettoria: da 0 a pi
+        theta = mod(vel_angolare * tnew, pi); % va da 0 a pi e ripete
+        figData.xtarget = x_c + raggio * cos(theta);
+        figData.ytarget = y_c + raggio * sin(theta);
+        set(targetPt,'xData',figData.xtarget);
+        set(targetPt,'yData',figData.ytarget);
+    end
     
     %If there are new mouse click locations, then set those as the new
     %target.
     if ~isempty(figData.xtarget)
-    p.xtarget = figData.xtarget;
+        p.xtarget = figData.xtarget;
     end
-    
     if ~isempty(figData.ytarget)
-    p.ytarget = figData.ytarget;
+        p.ytarget = figData.ytarget;
     end
     set(targetPt,'xData',p.xtarget); %Change the target point graphically.
     set(targetPt,'yData',p.ytarget);
+
+    % ======= INTEGRAZIONE DINAMICA =======
+    %Old velocity and position
+    xold = [z1(1),z1(3)];
+    vold = [z1(2),z1(4)];
+    [zdot1, T1, T2] = FullDyn(tnew,z1,p);
+    vinter1 = [zdot1(1),zdot1(3)];
+    ainter = [zdot1(2),zdot1(4)];
+    vinter2 = vold + ainter*dt;
+    xnew = xold + vinter2*dt;
+    vnew = (xnew-xold)/dt;
+    display(norm(vnew))
+    % Calcola la velocità end-effector attuale (modulo)
+    J = JacobianEndeffector(p.l1, p.l2, z1(1), z1(3));
+    qdot = [z1(2); z1(4)];
+    v_ee = J * qdot;
+    vel_ee = norm(v_ee); % modulo della velocità end-effector
+    [p.Kp, p.Kd] = computeKpKd(vel_ee);
+    z2 = [xnew(1) vnew(1) xnew(2) vnew(2)];
+    z1 = z2;
+    told = tnew;
     
     %When you hit a key, it changes to force mode, where the mouse will
     %pull things.
@@ -156,6 +190,15 @@ while (ishandle(f))
     %Show torques on screen (text only atm) update for time series later.
     set(tmeter1,'string',strcat(num2str(T1,2),' Nm'));
     set(tmeter2,'string',strcat(num2str(T2,2),' Nm'));
+    
+    % Aggiorna i tracker a video
+    set(kpText, 'String', sprintf('Kp: %.2f', p.Kp));
+    set(kdText, 'String', sprintf('Kd: %.2f', p.Kd));
+    % Calcola velocità end-effector
+    J = JacobianEndeffector(p.l1, p.l2, z1(1), z1(3));
+    qdot = [z1(2); z1(4)];
+    v_ee = J * qdot;
+    set(velText, 'String', sprintf('Vel: [%.2f, %.2f]', v_ee(1), v_ee(2)));
     
     drawnow;
 end
@@ -211,4 +254,11 @@ function MousePos(varargin)
         figData.Fy = 10*(mousePos(1,2)-figData.yend);
     end
      set(varargin{1},'UserData',figData);
+end
+
+% Funzione per il Jacobiano dell'end-effector
+function J = JacobianEndeffector(l1, l2, th1, th2)
+    t2 = th1 + th2;
+    J = [-l1*cos(th1)-l2*cos(t2), -l2*cos(t2);
+          l1*sin(th1)+l2*sin(t2),  l2*sin(t2)];
 end

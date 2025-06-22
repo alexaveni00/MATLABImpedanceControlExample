@@ -23,7 +23,9 @@ ydotCurrentTar = 0;
 T = ImpedenceControl(p.Kd,p.Kp,p.l1,p.l2,th1,th2,thdot1,thdot2,xdotCurrentTar,xCurrentTar,ydotCurrentTar,yCurrentTar);
 
 %Add gravity compensation
-T1 = T(1) + GravityCompT1(0,0,p.d1,p.d2,p.g,p.l1,p.l2,p.m1,p.m2,th1,th2,thdot1,thdot2);
+% Paragrafo 16.3.1 di Kurfess, si ha lo jacobiano trasposto (otenuto già in T1) più una parte indicata con N(q, qdot) che è la compensazione della
+% gravità.
+T1 = T(1) + GravityCompT1(0,0,p.d1,p.d2,p.g,p.l1,p.l2,p.m1,p.m2,th1,th2,thdot1,thdot2); 
 T2 = T(2) + GravityCompT2(0,0,p.d2,p.g,p.l1,p.l2,p.m2,th1,th2,thdot1);
 
 %Use the autoderived functions for the accelerations. 

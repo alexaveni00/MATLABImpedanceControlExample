@@ -30,11 +30,11 @@ rederive = false;
 %%%%%%%% System Parameters %%%%%%%%
 
 %Initial conditions:
-p.init = [pi/4    0.0    pi/4  0.0]';
+p.init = [-2*pi/3; 0; -pi/2; 0]; % Inclinazione da zampa, end-effector in basso a sinistra
 
 p.g = 9.81;
-p.m1 = 1; %Mass of link 1.
-p.m2 = 1; %Mass of link 2.
+p.m1 = 0.5; %Mass of link 1.
+p.m2 = 0.5; %Mass of link 2.
 p.l1 = 1; %Total length of link 1.
 p.l2 = 1; %Total length of link 2.
 p.d1 = p.l1/2; %Center of mass distance along link 1 from the fixed joint.
@@ -51,8 +51,12 @@ p.Fy = 0;
 %%%%%%%% Control Parameters %%%%%%%%
 
 %Controller Gains
-p.Kp = 10;
-p.Kd = 8;
+% Calcola la velocità end-effector iniziale (angolare)
+J0 = JacobianEndeffector(p.l1, p.l2, p.init(1), p.init(3));
+qdot0 = [p.init(2); p.init(4)];
+v_ee0 = J0 * qdot0;
+vel_ee0 = norm(v_ee0); % modulo della velocità end-effector
+[p.Kp, p.Kd] = computeKpKd(vel_ee0); % Valori iniziali di Kp e Kd
 
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
