@@ -19,7 +19,7 @@ close all
 
 %Name the whole window and define the mouse callback function
 f = figure;
-set(f,'WindowButtonMotionFcn','','WindowButtonDownFcn',@ClickDown,'WindowButtonUpFcn',@ClickUp);
+set(f);
 
 figData.xtarget = [];
 figData.ytarget = [];
@@ -93,15 +93,23 @@ autoTrajectory = true; % Imposta a true per attivare la traiettoria automatica
 raggio = 0.7; % raggio della semicirconferenza
 vel_angolare = pi/2; % velocità angolare [rad/s]
 
-% Centro della semicirconferenza (puoi cambiare questi valori)
-x_c = p.xtarget - 0.5; % sposta a sinistra
-
-y_c = p.ytarget - 0.5; % sposta in basso
+% Centro della semicirconferenza
+x_c = p.xtarget;
+y_c = p.ytarget; % sposta in basso
 
 % Tracker per Kp, Kd e velocità end-effector
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 velText = text(0.6, -4.0, 'Vel: [0.00, 0.00]', 'FontSize', 18, 'Color', 'g');
+
+% === Variabile di stato per la traiettoria (usata con setappdata/getappdata) ===
+setappdata(f, 'traj_active', false);
+setappdata(f, 'traj_theta', 0);
+
+% Pulsante per avviare/ripartire la traiettoria
+btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
+    'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@restartTrajectory, f});
+set(btn, 'Enable', 'on');
 
 while (ishandle(f))
     figData = get(f,'UserData');
@@ -110,14 +118,21 @@ while (ishandle(f))
     dt = tnew - told;
 
     % === TRAIETTORIA AUTOMATICA ===
-    if autoTrajectory
-        % Parametrizzazione: da pi a 0 (semicerchio "in avanti")
-        % Inverti la direzione della traiettoria: da 0 a pi
-        theta = mod(vel_angolare * tnew, pi); % va da 0 a pi e ripete
-        figData.xtarget = x_c + raggio * cos(theta);
-        figData.ytarget = y_c + raggio * sin(theta);
-        set(targetPt,'xData',figData.xtarget);
-        set(targetPt,'yData',figData.ytarget);
+    traj_active = getappdata(f, 'traj_active');
+    traj_theta = getappdata(f, 'traj_theta');
+    if autoTrajectory && traj_active
+        [x_traj, y_traj, traj_theta] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
+        traj_theta = traj_theta + vel_angolare * dt;
+        if traj_theta <= pi
+            figData.xtarget = x_traj;
+            figData.ytarget = y_traj;
+            set(targetPt,'xData',figData.xtarget);
+            set(targetPt,'yData',figData.ytarget);
+            setappdata(f, 'traj_theta', traj_theta);
+        else
+            setappdata(f, 'traj_active', false);
+            set(btn, 'Enable', 'on');
+        end
     end
     
     %If there are new mouse click locations, then set those as the new
@@ -141,7 +156,6 @@ while (ishandle(f))
     vinter2 = vold + ainter*dt;
     xnew = xold + vinter2*dt;
     vnew = (xnew-xold)/dt;
-    display(norm(vnew))
     % Calcola la velocità end-effector attuale (modulo)
     J = JacobianEndeffector(p.l1, p.l2, z1(1), z1(3));
     qdot = [z1(2); z1(4)];
@@ -215,50 +229,8 @@ function ClickUp(varargin)
     set(varargin{1},'UserData',figData);
 end
 
-% When click-down occurs, enable the mouse motion detecting callback
-function ClickDown(varargin)
-    figData = get(varargin{1},'UserData');
-    figData.Fx = 0;
-    figData.Fy = 0;
-
-    set(figData.fig,'WindowButtonMotionFcn',@MousePos);
-    set(varargin{1},'UserData',figData);
-end
-
-% any keypress switches from dragging the setpoint to applying a
-% disturbance.
-function KeyPress(hObject, eventdata, handles)
-
-figData = get(hObject,'UserData');
-
-figData.tarControl = ~figData.tarControl;
-
-    if figData.tarControl
-       disp('Mouse will change the target point of the end effector.')
-    else
-       disp('Mouse will apply a force on end effector.') 
-    end
-set(hObject,'UserData',figData);
-end
-
-% Checks mouse position and sends it back up.
-function MousePos(varargin)
-    figData = get(varargin{1},'UserData');
-
-    mousePos = get(figData.simArea,'CurrentPoint');
-    if figData.tarControl
-        figData.xtarget = mousePos(1,1);
-        figData.ytarget = mousePos(1,2);
-    else
-        figData.Fx = 10*(mousePos(1,1)-figData.xend);
-        figData.Fy = 10*(mousePos(1,2)-figData.yend);
-    end
-     set(varargin{1},'UserData',figData);
-end
-
-% Funzione per il Jacobiano dell'end-effector
-function J = JacobianEndeffector(l1, l2, th1, th2)
-    t2 = th1 + th2;
-    J = [-l1*cos(th1)-l2*cos(t2), -l2*cos(t2);
-          l1*sin(th1)+l2*sin(t2),  l2*sin(t2)];
+function restartTrajectory(~,~,f)
+    setappdata(f, 'traj_active', true);
+    setappdata(f, 'traj_theta', 0);
+    set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
 end
