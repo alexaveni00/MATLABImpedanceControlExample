@@ -93,7 +93,7 @@ matlabFunction(T2Eq, 'file', 'GravityCompT2');
 %Jacobian relating end effector velocity to joint space vel
 % ie Ve = J*qv
 
-J = jacobian(Ve,{thdot1 thdot2}); %paragrafo 2.4
+J = jacobian(Ve,[thdot1 thdot2]); %paragrafo 2.4
 
 syms Kp Kd xt yt xdott ydott real
 
@@ -118,4 +118,13 @@ matlabFunction(Ta, 'file', 'ImpedenceControl');
 % Etot = PE + KE;
 % 
 % matlabFunction(Etot, 'file', 'TotEnergy');
+
+
+% === Generazione automatica funzione ForceOnEndEffector tramite Jacobiano ===
+syms l1 l2 th1 th2 T1 T2 real
+x = l1*cos(th1) + l2*cos(th1+th2);
+y = l1*sin(th1) + l2*sin(th1+th2);
+J = jacobian([x; y], [th1, th2]);
+F_ee = simplify(inv(J').*[T1; T2]);
+matlabFunction(F_ee, 'Vars', [T1, T2, l1, l2, th1, th2], 'File', 'ForceOnEndEffector');
 

@@ -204,7 +204,7 @@ while (ishandle(f))
     %Show torques on screen (text only atm) update for time series later.
     set(tmeter1,'string',strcat(num2str(T1,2),' Nm'));
     set(tmeter2,'string',strcat(num2str(T2,2),' Nm'));
-    
+        
     % Aggiorna i tracker a video
     set(kpText, 'String', sprintf('Kp: %.2f', p.Kp));
     set(kdText, 'String', sprintf('Kd: %.2f', p.Kd));
@@ -213,20 +213,8 @@ while (ishandle(f))
     qdot = [z1(2); z1(4)];
     v_ee = J * qdot;
     set(velText, 'String', sprintf('Vel: [%.2f, %.2f]', v_ee(1), v_ee(2)));
-    
     drawnow;
 end
-end
-
-%%%% BEGIN CALLBACKS FOR MOUSE AND KEYBOARD STUFF %%%%%
-
-% When click-up occurs, disable the mouse motion detecting callback
-function ClickUp(varargin)
-    figData = get(varargin{1},'UserData');
-    set(figData.fig,'WindowButtonMotionFcn','');
-    figData.Fx = 0;
-    figData.Fy = 0;
-    set(varargin{1},'UserData',figData);
 end
 
 function restartTrajectory(~,~,f)
