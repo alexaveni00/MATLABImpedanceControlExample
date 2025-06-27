@@ -19,8 +19,6 @@ close all
 
 %Name the whole window and define the mouse callback function
 f = figure;
-set(f);
-
 figData.xtarget = [];
 figData.ytarget = [];
 figData.Fx = [];
@@ -32,6 +30,7 @@ figData.tarControl = true;
 
 %%%%%%%% 1st Subplot -- the pendulum animation %%%%%%%
 figData.simArea = subplot(1,1,1); %Eliminated other subplots, but left this for syntax consistency.
+figData.simArea.Toolbar = []; % Disable the toolbar for this subplot
 axis equal
 hold on
 
@@ -129,6 +128,13 @@ btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
     'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@restartTrajectory, f});
 set(btn, 'Enable', 'on');
 
+set(link1, 'HitTest','off', 'PickableParts','none');
+set(link2, 'HitTest','off', 'PickableParts','none');
+set(h1,    'HitTest','off', 'PickableParts','none');
+set(h2,    'HitTest','off', 'PickableParts','none');
+set(targetPt, 'HitTest','off', 'PickableParts','none');
+set(constraintLine, 'HitTest','off', 'PickableParts','none');
+
 while (ishandle(f))
     figData = get(f,'UserData');
     %%%% INTEGRATION %%%%
@@ -197,13 +203,6 @@ while (ishandle(f))
     figData.xend = ra_e(1);
     figData.yend = ra_e(2);
     set(f,'UserData',figData);
-    
-    if ~isempty(figData.Fx)
-    p.Fx = figData.Fx;
-    end
-    if ~isempty(figData.Fy)
-    p.Fy = figData.Fy;
-    end
     
     tstar = told; %Get the time (used during this entire iteration)
     

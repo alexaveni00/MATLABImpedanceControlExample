@@ -24,9 +24,8 @@ params_terreno.damping = p.ground_damping;
 params_terreno.lambda_max = p.lambda_max;
 
 % Calcola reazione vincolare tramite funzione terreno
-[lambda, vincolo_attivo, info_terreno] = GroundConstraint(y_ee, v_ee_y, params_terreno);
+[lambda, vincolo_attivo] = GroundConstraint(y_ee, v_ee_y, params_terreno);
 
-disp(info_terreno); % Debug: mostra info sul vincolo
 % Torques di controllo e dinamica non vincolata
 [zdot_free, T1, T2] = FullDyn(t, z, p);
 tau = [T1; T2];
