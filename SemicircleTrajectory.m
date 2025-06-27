@@ -1,4 +1,4 @@
-function [x, y, theta] = SemicircleTrajectory(t, x_c, y_c, raggio, vel_angolare)
+function [x, y] = SemicircleTrajectory(t, x_c, y_c, raggio, vel_angolare)
 % Restituisce la posizione [x, y] lungo una semicirconferenza
 % t: tempo
 % x_c, y_c: centro

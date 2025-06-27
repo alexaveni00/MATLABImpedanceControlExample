@@ -119,12 +119,35 @@ matlabFunction(Ta, 'file', 'ImpedenceControl');
 % 
 % matlabFunction(Etot, 'file', 'TotEnergy');
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%% Mass, Coriolis e Gravity %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% === Generazione automatica funzione ForceOnEndEffector tramite Jacobiano ===
-syms l1 l2 th1 th2 T1 T2 real
-x = l1*cos(th1) + l2*cos(th1+th2);
-y = l1*sin(th1) + l2*sin(th1+th2);
-J = jacobian([x; y], [th1, th2]);
-F_ee = simplify(inv(J').*[T1; T2]);
-matlabFunction(F_ee, 'Vars', [T1, T2, l1, l2, th1, th2], 'File', 'ForceOnEndEffector');
+% Stati simbolici
+syms th1 th2 thdot1 thdot2 thdotdot1 thdotdot2 real 
 
+% Vettori di stato
+q = [th1; th2];
+qdot = [thdot1; thdot2];
+qddot = [thdotdot1; thdotdot2];
+
+% Energia potenziale e cinetica per la lagrangiana
+PE = g*dot(ra_c2,j)*m2 + g*dot(ra_c1,j)*m1;
+KE = 1/2*I1*thdot1^2 + 1/2*I2*(thdot2+thdot1)^2 + 1/2*m1*dot(Vc1,Vc1) + 1/2*m2*dot(Vc2,Vc2);
+
+% Lagrangiana
+L = KE - PE;
+
+% Equazioni di Eulero-Lagrange
+EL1 = diff(diff(L, thdot1), th1)*thdot1 + diff(diff(L, thdot1), th2)*thdot2 + diff(diff(L, thdot1), thdot1)*thdotdot1 + diff(diff(L, thdot1), thdot2)*thdotdot2 - diff(L, th1);
+EL2 = diff(diff(L, thdot2), th1)*thdot1 + diff(diff(L, thdot2), th2)*thdot2 + diff(diff(L, thdot2), thdot1)*thdotdot1 + diff(diff(L, thdot2), thdot2)*thdotdot2 - diff(L, th2);
+
+EL = [EL1; EL2];
+
+% Ricava M, C, G
+[M, rhs] = equationsToMatrix(EL, qddot);
+C_G = simplify(rhs);
+C = jacobian(C_G, qdot)*qdot; % Coriolis/centrifughi
+G = subs(C_G, qdot, [0;0]);   % Gravità
+
+matlabFunction(M, C, G, 'Vars', {th1, th2, thdot1, thdot2, m1, m2, l1, l2, d1, d2, I1, I2, g}, 'File', 'MassCoriolisGravity');

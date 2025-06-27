@@ -8,8 +8,7 @@ function [Kp, Kd] = computeKpKd(thetadot)
     %   usando una funzione sigmoide come descritto nella sezione relativa alla Figura 9.
     %
     % INPUT:
-    %   z  - quota verticale attuale del piede [m] (non usata in questa versione)
-    %   thetadot - velocità verticale del piede [m/s]
+    %   thetadot - velocità verticale del piede [m/s] (SCALARE)
     %
     % OUTPUT:
     %   Kp - guadagno proporzionale (costante) [N/m]
@@ -23,10 +22,15 @@ function [Kp, Kd] = computeKpKd(thetadot)
     deltaKd = 9;   % valore massimo di smorzamento durante l'impatto
     Zs = 50;        % pendenza della sigmoide (più grande = transizione più rapida)
     
-    % Funzione sigmoide in funzione della velocità angolare (thetadot)
+    % Protezione: se thetadot non è valido, restituisci solo il valore base
+    if ~isnumeric(thetadot) || isnan(thetadot) || isinf(thetadot)
+        Kd = Kd0;
+        return;
+    end
+    
+    % Funzione sigmoide in funzione della velocità (SCALARE!)
     sigma = 1 / (1 + exp(-Zs * thetadot));
     
     % Interpolazione tra minimo e massimo smorzamento
     Kd = Kd0 + deltaKd * sigma;
-    end
-    
+end

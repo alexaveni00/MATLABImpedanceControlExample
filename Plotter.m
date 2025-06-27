@@ -114,10 +114,11 @@ y_c = p.ytarget; % sposta in basso
 traj_theta_start = p.theta_start;
 traj_theta_end = p.theta_end;
 
-% Tracker per Kp, Kd e velocità end-effector
+% Tracker per Kp, Kd, velocità end-effector e lambda
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 velText = text(0.6, -4.0, 'Vel: [0.00, 0.00]', 'FontSize', 18, 'Color', 'g');
+lambdaText = text(0.6, -3.6, 'lambda: 0.00', 'FontSize', 18, 'Color', [0.2 0.2 0.8]);
 
 % === Variabile di stato per la traiettoria (usata con setappdata/getappdata) ===
 setappdata(f, 'traj_active', false);
@@ -138,7 +139,7 @@ while (ishandle(f))
     traj_active = getappdata(f, 'traj_active');
     traj_theta = getappdata(f, 'traj_theta');
     if autoTrajectory && traj_active
-        [x_traj, y_traj, traj_theta_val] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
+        [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
         traj_theta = traj_theta + vel_angolare * dt;
         if traj_theta <= traj_theta_end
             figData.xtarget = x_traj;
@@ -173,7 +174,8 @@ while (ishandle(f))
     %Old velocity and position
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
-    [zdot1, T1, T2] = FullDyn(tnew,z1,p);
+    [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(tnew,z1,p);
+    set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     vinter2 = vold + ainter*dt;

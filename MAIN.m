@@ -51,24 +51,21 @@ p.Fy = 0;
 %%%%%%%% Control Parameters %%%%%%%%
 
 %Controller Gains
-% Calcola la velocità end-effector iniziale (angolare)
 J0 = JacobianEndeffector(p.l1, p.l2, p.init(1), p.init(3));
 qdot0 = [p.init(2); p.init(4)];
 v_ee0 = J0 * qdot0;
-vel_ee0 = norm(v_ee0); % modulo della velocità end-effector
-[p.Kp, p.Kd] = computeKpKd(vel_ee0); % Valori iniziali di Kp e Kd
+vel_ee0_mod = norm(v_ee0); % modulo della velocità end-effector
+[p.Kp, p.Kd] = computeKpKd(vel_ee0_mod);
 
 %Single target:
-p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
+p.xtarget = x0;
 p.ytarget = y0;
-p.yinit = y0; %Initial y position of the target.
+p.yinit = y0;
 %%%%%%%% Run Derivers %%%%%%%%
 
 if rederive
-%If the gain matrix hasn't been found yet, then we assume derivation hasn't
-%happened yet.
-        deriverRelativeAngles;
-        disp('Equations of motion and control parameters derived using relative angles.');
+    deriverRelativeAngles;
+    disp('Equations of motion and control parameters derived using relative angles.');
 end
 
 %%%%%%%% Integrate %%%%%%%%
@@ -78,6 +75,12 @@ theta_start = 0;
 theta_end = pi + pi/8; % Estensione di 22.5 gradi oltre il semicerchio
 p.theta_start = theta_start;
 p.theta_end = theta_end;
+
+% Imposta la forza massima che il terreno può esercitare (lambda_max)
+p.lambda_max = 500; % [N] forza massima di reazione vincolare (modifica a piacere)
+
+% Smorzamento del terreno (opzionale, per simulare terreno "morbido")
+p.ground_damping = 50; % [N/(m/s)] coefficiente di smorzamento verticale (modifica a piacere)
 
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
 
