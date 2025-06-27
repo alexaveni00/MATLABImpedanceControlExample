@@ -63,10 +63,17 @@ tmeter2 = text(2.2,-3.2,'0.00','FontSize',22,'Color', 'b');
 targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
 
 % Traccia del target (debug, creata una sola volta)
-DEBUG_TRAJECTORY_TRACE = false; % imposta a false per disattivare
+DEBUG_TRAJECTORY_TRACE = false; % imposta a true per attivare la traccia
 traceX = [];
 traceY = [];
 tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 10, 'DisplayName', 'Target Trace');
+
+% Vincolo: retta orizzontale passante per il punto di inizio traiettoria
+DEBUG_CONSTRAINT_LINE = true; % imposta a false per nascondere la retta
+constraintLine = plot(nan, nan, 'k-', 'LineWidth', 1, 'DisplayName', 'Constraint Line');
+if DEBUG_CONSTRAINT_LINE
+    plotDebugLine(constraintLine, xlim, p.yinit);
+end
 
 hold off
 
@@ -248,5 +255,15 @@ function plotTargetTrace(tracePlot, traceX, traceY)
     end
     if ishandle(tracePlot)
         set(tracePlot, 'XData', traceX, 'YData', traceY);
+    end
+end
+
+function plotDebugLine(lineHandle, xlimVals, y_value)
+% plotDebugLine - Disegna una retta orizzontale su tutto l'asse a quota y_value
+    if nargin < 3
+        error('plotDebugLine richiede lineHandle, xlimVals, y_value');
+    end
+    if ishandle(lineHandle)
+        set(lineHandle, 'XData', xlimVals, 'YData', [y_value, y_value]);
     end
 end

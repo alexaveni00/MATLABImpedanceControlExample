@@ -61,7 +61,7 @@ vel_ee0 = norm(v_ee0); % modulo della velocità end-effector
 %Single target:
 p.xtarget = x0; %What points are we shooting for in WORLD SPACE?
 p.ytarget = y0;
-
+p.yinit = y0; %Initial y position of the target.
 %%%%%%%% Run Derivers %%%%%%%%
 
 if rederive
