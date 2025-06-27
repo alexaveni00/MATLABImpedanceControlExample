@@ -62,6 +62,12 @@ tmeter2 = text(2.2,-3.2,'0.00','FontSize',22,'Color', 'b');
 %Target Pt.
 targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
 
+% Traccia del target (debug, creata una sola volta)
+DEBUG_TRAJECTORY_TRACE = false; % imposta a false per disattivare
+traceX = [];
+traceY = [];
+tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 10, 'DisplayName', 'Target Trace');
+
 hold off
 
 %Make the whole window big for handy viewing:
@@ -97,6 +103,10 @@ vel_angolare = pi/2; % velocità angolare [rad/s]
 x_c = p.xtarget;
 y_c = p.ytarget; % sposta in basso
 
+% Usa i limiti definiti nel main
+traj_theta_start = p.theta_start;
+traj_theta_end = p.theta_end;
+
 % Tracker per Kp, Kd e velocità end-effector
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
@@ -121,14 +131,20 @@ while (ishandle(f))
     traj_active = getappdata(f, 'traj_active');
     traj_theta = getappdata(f, 'traj_theta');
     if autoTrajectory && traj_active
-        [x_traj, y_traj, traj_theta] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
+        [x_traj, y_traj, traj_theta_val] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
         traj_theta = traj_theta + vel_angolare * dt;
-        if traj_theta <= pi
+        if traj_theta <= traj_theta_end
             figData.xtarget = x_traj;
             figData.ytarget = y_traj;
             set(targetPt,'xData',figData.xtarget);
             set(targetPt,'yData',figData.ytarget);
             setappdata(f, 'traj_theta', traj_theta);
+            % Debug: lascia traccia del target
+            if DEBUG_TRAJECTORY_TRACE
+                traceX(end+1) = x_traj;
+                traceY(end+1) = y_traj;
+                plotTargetTrace(tracePlot, traceX, traceY);
+            end
         else
             setappdata(f, 'traj_active', false);
             set(btn, 'Enable', 'on');
@@ -221,4 +237,16 @@ function restartTrajectory(~,~,f)
     setappdata(f, 'traj_active', true);
     setappdata(f, 'traj_theta', 0);
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
+end
+
+function plotTargetTrace(tracePlot, traceX, traceY)
+% plotTargetTrace - Aggiorna la traccia del target nella figura
+%   tracePlot: handle al plot della traccia
+%   traceX, traceY: vettori delle posizioni target
+    if nargin < 3
+        error('plotTargetTrace richiede tracePlot, traceX, traceY');
+    end
+    if ishandle(tracePlot)
+        set(tracePlot, 'XData', traceX, 'YData', traceY);
+    end
 end

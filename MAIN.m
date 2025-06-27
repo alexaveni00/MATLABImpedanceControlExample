@@ -73,6 +73,12 @@ end
 
 %%%%%%%% Integrate %%%%%%%%
 
+% Parametri traiettoria (semicerchio + estensione)
+theta_start = 0;
+theta_end = pi + pi/8; % Estensione di 22.5 gradi oltre il semicerchio
+p.theta_start = theta_start;
+p.theta_end = theta_end;
+
 Plotter(p) %Integration is done in real time using symplectic euler like we did in the CS animation class.
 
 
