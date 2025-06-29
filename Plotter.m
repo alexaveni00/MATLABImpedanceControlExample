@@ -15,7 +15,7 @@ function Plotter(p)
 close all
 
 % === DEBUG: mostra la X rossa sul target solo se attivo ===
-DEBUG_SHOW_TARGET_X = false; % Imposta a true per vedere la X rossa
+DEBUG_SHOW_TARGET_X = true; % Imposta a true per vedere la X rossa
 
 %Playback speed:
 % playback = p.animationSpeed;

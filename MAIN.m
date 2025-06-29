@@ -57,7 +57,7 @@ end
 
 % Parametri traiettoria semicirconferenza + estensione
 p.theta_start = 0;
-p.theta_end   = pi + pi/8;
+p.theta_end   = pi;
 
 % Avvia animazione & integrazione
 Plotter(p);
