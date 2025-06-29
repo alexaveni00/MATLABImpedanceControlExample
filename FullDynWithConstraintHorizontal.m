@@ -32,7 +32,7 @@ ground_damping   = 0.2 * 2*sqrt(p.ground_stiffness*m_eff);
 params_terreno.yinit = p.yinit;
 params_terreno.epsilon = 1e-3;
 params_terreno.stiffness = p.ground_stiffness;
-
+params_terreno.n = 1.5;  % esponente per il modello Hunt-Crossley
 params_terreno.damping = ground_damping;
 params_terreno.lambda_max = MaxEndEffectorForce(z,p);
 
