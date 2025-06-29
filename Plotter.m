@@ -15,7 +15,7 @@ function Plotter(p)
 close all
 
 % === DEBUG: mostra la X rossa sul target solo se attivo ===
-DEBUG_SHOW_TARGET_X = true; % Imposta a true per vedere la X rossa
+DEBUG_SHOW_TARGET_X = false; % Imposta a true per vedere la X rossa
 
 %Playback speed:
 % playback = p.animationSpeed;
@@ -140,14 +140,14 @@ set(btn, 'Enable', 'on');
 uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
     'Position', [20 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 2000, 'damping', 0)));
+    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 2e7)));
 % Pulsante terreno morbido
 uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
     'Position', [160 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 2000, 'damping', 50)));
+    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 8e4)));
 % Imposta valori di default all'avvio (terreno duro)
-setappdata(f, 'ground_params', struct('stiffness', 2000, 'damping', 0));
+setappdata(f, 'ground_params', struct('stiffness', 2e7));
 
 set(link1, 'HitTest','off', 'PickableParts','none');
 set(link2, 'HitTest','off', 'PickableParts','none');
@@ -164,7 +164,6 @@ while (ishandle(f))
     % Aggiorna i parametri terreno da GUI
     ground_params = getappdata(f, 'ground_params');
     p.ground_stiffness = ground_params.stiffness;
-    p.ground_damping = ground_params.damping;
 
     % === TRAIETTORIA AUTOMATICA ===
     traj_active = getappdata(f, 'traj_active');
@@ -187,6 +186,7 @@ while (ishandle(f))
                 plotTargetTrace(tracePlot, traceX, traceY);
             end
         else
+            figData.ytarget = figData.ytarget - 0.1;
             setappdata(f, 'traj_active', false);
             set(btn, 'Enable', 'on');
         end

@@ -16,11 +16,24 @@ J = JacobianEndeffector(p.l1, p.l2, th1, th2);
 v_ee = J * [thdot1; thdot2];
 v_ee_y = v_ee(2);
 
+% Torques di controllo e dinamica non vincolata
+[zdot_free, T1, T2] = FullDyn(z, p);
+tau = [T1; T2];
+[M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
+
+% Calcola massa effettiva per il vincolo orizzontale
+% Jn è la riga del Jacobiano relativa alla velocità verticale dell'end-effector
+% Calcolo anche il ground_damping
+Jn = J(2,:);    % 1×2
+m_eff = 1 / ( Jn * (M \ Jn') );
+ground_damping   = 0.2 * 2*sqrt(p.ground_stiffness*m_eff); 
+
 % Parametri terreno per la funzione GroundConstraint
 params_terreno.yinit = p.yinit;
 params_terreno.epsilon = 1e-3;
 params_terreno.stiffness = p.ground_stiffness;
-params_terreno.damping = p.ground_damping;
+
+params_terreno.damping = ground_damping;
 params_terreno.lambda_max = MaxEndEffectorForce(z,p);
 
 % Vincolo attivo solo se p.enable_constraint == true
@@ -31,10 +44,6 @@ else
     vincolo_attivo = false;
 end
 
-% Torques di controllo e dinamica non vincolata
-[zdot_free, T1, T2] = FullDyn(z, p);
-tau = [T1; T2];
-[M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
 
 if vincolo_attivo
     F_ext = [0; -min(lambda, params_terreno.lambda_max)];
