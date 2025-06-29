@@ -1,5 +1,5 @@
-function [lambda, vincolo_attivo] = GroundConstraint(y_ee, v_ee_y, params)
-%GROUND CONSTRAINT - Modello terreno generico (rigido + smorzamento)
+function [lambda, activeConstraint, info] = GroundConstraint(y_ee, v_ee_y, params)
+%GROUND CONSTRAINT - Modello terreno generico (rigido + smorzamento corretto)
 %   y_ee: posizione verticale end-effector
 %   v_ee_y: velocità verticale end-effector
 %   params: struct con i parametri del terreno
@@ -11,19 +11,35 @@ function [lambda, vincolo_attivo] = GroundConstraint(y_ee, v_ee_y, params)
 %
 %   Output:
 %       lambda: forza di reazione vincolare (>=0)
-%       vincolo_attivo: booleano
-%       info: struct opzionale (penetrazione, ecc)
+%       activeConstraint: booleano
+%       info: struct con campi .penetration, .dampingForce, .springForce
 
+    % Distanza rispetto al livello del terreno
+    phi = y_ee - params.yinit;
+    % Attivo solo se sotto la soglia di epsilon
+    activeConstraint = (phi < params.epsilon);
 
-phi = y_ee - params.yinit;
-vincolo_attivo = (phi < params.epsilon);
+    % Inizializzo info
+    info = struct('penetration', 0, 'springForce', 0, 'dampingForce', 0);
 
-if vincolo_attivo
-    % Modello molla-smorzatore (solo se penetra)
-    lambda = params.stiffness * max(0, -phi) - params.damping * min(0, v_ee_y);
-    lambda = min(lambda, params.lambda_max);
-    lambda = max(lambda, 0); % nessuna trazione
-else
-    lambda = 0;
-end
+    if activeConstraint
+        % Penetrazione positiva
+        penetration   = max(0, -phi);
+        % Forza molla
+        springForce   = params.stiffness * penetration;
+        % Forza di damping (attiva solo se v_ee_y < 0)
+        dampingForce  = params.damping  * max(0, -v_ee_y);
+
+        % Salvo info utili
+        info.penetration = penetration;
+        info.springForce = springForce;
+        info.dampingForce= dampingForce;
+
+        % Sommo le forze e poi saturo
+        lambda = springForce + dampingForce;
+        lambda = min(lambda, params.lambda_max);
+        lambda = max(lambda, 0);
+    else
+        lambda = 0;
+    end
 end

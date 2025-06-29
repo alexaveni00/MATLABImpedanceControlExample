@@ -1,4 +1,4 @@
-function [zdot, T1, T2, lambda] = FullDynWithConstraintHorizontal(t, z, p)
+function [zdot, T1, T2, lambda] = FullDynWithConstraintHorizontal(z, p)
 % Dinamica con vincolo orizzontale y = p.yinit (vincolo attivo solo se y_ee < p.yinit)
 % z = [th1; thdot1; th2; thdot2]
 
@@ -19,26 +19,26 @@ v_ee_y = v_ee(2);
 % Parametri terreno per la funzione GroundConstraint
 params_terreno.yinit = p.yinit;
 params_terreno.epsilon = 1e-3;
-params_terreno.stiffness = p.lambda_max; % se vuoi terreno rigido, usa lambda_max come stiffness
+params_terreno.stiffness = p.ground_stiffness;
 params_terreno.damping = p.ground_damping;
-params_terreno.lambda_max = p.lambda_max;
+params_terreno.lambda_max = MaxEndEffectorForce(z,p);
 
-% Calcola reazione vincolare tramite funzione terreno
-[lambda, vincolo_attivo] = GroundConstraint(y_ee, v_ee_y, params_terreno);
+% Vincolo attivo solo se p.enable_constraint == true
+if isfield(p, 'enable_constraint') && p.enable_constraint
+    [lambda, vincolo_attivo, info] = GroundConstraint(y_ee, v_ee_y, params_terreno);
+else
+    lambda = 0;
+    vincolo_attivo = false;
+end
 
 % Torques di controllo e dinamica non vincolata
-[zdot_free, T1, T2] = FullDyn(t, z, p);
+[zdot_free, T1, T2] = FullDyn(z, p);
 tau = [T1; T2];
 [M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
 
-% Applica la forza di reazione vincolare come forza esterna se il vincolo è attivo
 if vincolo_attivo
-    % Forza esterna verticale sull'end-effector
-    F_ext = [0; -lambda];
-    % Torques equivalenti alle articolazioni
+    F_ext = [0; -min(lambda, params_terreno.lambda_max)];
     tau_constraint = J' * F_ext;
-    % Dinamica con forza di reazione
-    % Gestione singolarità/NaN per M
     if rcond(M) < 1e-8 || any(isnan(M(:))) || any(isinf(M(:)))
         qddot = [0;0];
     else
@@ -46,8 +46,7 @@ if vincolo_attivo
     end
     zdot = [thdot1; qddot(1); thdot2; qddot(2)];
 else
-    % Dinamica libera
     zdot = zdot_free;
-    lambda = 0; % Assicurati che lambda sia zero quando il vincolo non è attivo
+    lambda = 0;
 end
 end

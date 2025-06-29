@@ -14,6 +14,9 @@
 function Plotter(p)
 close all
 
+% === DEBUG: mostra la X rossa sul target solo se attivo ===
+DEBUG_SHOW_TARGET_X = false; % Imposta a true per vedere la X rossa
+
 %Playback speed:
 % playback = p.animationSpeed;
 
@@ -59,7 +62,11 @@ tmeter1 = text(0.6,-3.2,'0.00','FontSize',22,'Color', 'r');
 tmeter2 = text(2.2,-3.2,'0.00','FontSize',22,'Color', 'b');
 
 %Target Pt.
-targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
+if DEBUG_SHOW_TARGET_X
+    targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
+else
+    targetPt = plot(nan, nan, 'xr', 'MarkerSize', 30, 'Visible', 'off');
+end
 
 % Traccia del target (debug, creata una sola volta)
 DEBUG_TRAJECTORY_TRACE = false; % imposta a true per attivare la traccia
@@ -98,6 +105,7 @@ z1 = p.init;
 told = 0;
 
 set(f,'UserData',figData);
+setappdata(f, 'enable_constraint', p.enable_constraint); % salva stato iniziale
 
 tic %Start the clock
 % === PARAMETRI TRAIETTORIA SEMICIRCONFERENZA ===
@@ -128,6 +136,19 @@ btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
     'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@restartTrajectory, f});
 set(btn, 'Enable', 'on');
 
+% Pulsante terreno duro
+uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
+    'Position', [20 520 120 30], ...
+    'FontSize', 10, ...
+    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 2000, 'damping', 0)));
+% Pulsante terreno morbido
+uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
+    'Position', [160 520 120 30], ...
+    'FontSize', 10, ...
+    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 2000, 'damping', 50)));
+% Imposta valori di default all'avvio (terreno duro)
+setappdata(f, 'ground_params', struct('stiffness', 2000, 'damping', 0));
+
 set(link1, 'HitTest','off', 'PickableParts','none');
 set(link2, 'HitTest','off', 'PickableParts','none');
 set(h1,    'HitTest','off', 'PickableParts','none');
@@ -140,6 +161,10 @@ while (ishandle(f))
     %%%% INTEGRATION %%%%
     tnew = toc;
     dt = tnew - told;
+    % Aggiorna i parametri terreno da GUI
+    ground_params = getappdata(f, 'ground_params');
+    p.ground_stiffness = ground_params.stiffness;
+    p.ground_damping = ground_params.damping;
 
     % === TRAIETTORIA AUTOMATICA ===
     traj_active = getappdata(f, 'traj_active');
@@ -150,8 +175,10 @@ while (ishandle(f))
         if traj_theta <= traj_theta_end
             figData.xtarget = x_traj;
             figData.ytarget = y_traj;
-            set(targetPt,'xData',figData.xtarget);
-            set(targetPt,'yData',figData.ytarget);
+            if DEBUG_SHOW_TARGET_X
+                set(targetPt,'xData',figData.xtarget);
+                set(targetPt,'yData',figData.ytarget);
+            end
             setappdata(f, 'traj_theta', traj_theta);
             % Debug: lascia traccia del target
             if DEBUG_TRAJECTORY_TRACE
@@ -173,14 +200,22 @@ while (ishandle(f))
     if ~isempty(figData.ytarget)
         p.ytarget = figData.ytarget;
     end
-    set(targetPt,'xData',p.xtarget); %Change the target point graphically.
-    set(targetPt,'yData',p.ytarget);
+    % Aggiorna la X rossa solo se il debug è attivo
+    if DEBUG_SHOW_TARGET_X
+        set(targetPt,'xData',p.xtarget); %Change the target point graphically.
+        set(targetPt,'yData',p.ytarget);
+        set(targetPt, 'Visible', 'on');
+    else
+        set(targetPt, 'Visible', 'off');
+    end
 
     % ======= INTEGRAZIONE DINAMICA =======
     %Old velocity and position
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
-    [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(tnew,z1,p);
+    % Recupera stato vincolo
+    p.enable_constraint = getappdata(f, 'enable_constraint');
+    [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(z1,p);
     set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
@@ -242,6 +277,7 @@ end
 end
 
 function restartTrajectory(~,~,f)
+    setappdata(f, 'enable_constraint', true); % Abilita vincolo orizzontale
     setappdata(f, 'traj_active', true);
     setappdata(f, 'traj_theta', 0);
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');

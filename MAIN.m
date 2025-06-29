@@ -45,10 +45,11 @@ p.ytarget = y0;
 p.yinit   = y0;
 
 % Parameters per gestione contatto e integrazione
-p.lambda_max      = 500;    % forza massima di reazione
+p.ground_stiffness = 1000; % stiffness del terreno
 p.ground_damping  = 50;     % damping terreno
 p.penetration_max = 0.05;   % penetrazione massima ammessa
 p.dt_max          = 0.01;   % passo dt massimo nel loop
+p.enable_constraint = false; % Abilita vincolo orizzontale
 if rederive
     deriverRelativeAngles;
     disp('Equazioni rederive.');
