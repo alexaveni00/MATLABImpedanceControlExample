@@ -152,6 +152,10 @@ setappdata(f,'ground_type','hard');
 setappdata(f,'soft_params', p.softParams);
 setappdata(f,'hard_params', p.hardParams);
 
+% Label dinamica per tipo terreno
+terrainLabel = uicontrol('Style','text','String','Terreno: duro', ...
+    'Position',[300 520 150 30],'FontSize',12,'BackgroundColor',[1 1 1]);
+
 set(link1, 'HitTest','off', 'PickableParts','none');
 set(link2, 'HitTest','off', 'PickableParts','none');
 set(h1,    'HitTest','off', 'PickableParts','none');
@@ -217,10 +221,13 @@ while (ishandle(f))
     p.enable_constraint = getappdata(f, 'enable_constraint');
     % recupera il tipo
     gtype = getappdata(f,'ground_type');
+    % Aggiorna label terreno
     if strcmp(gtype,'soft')
-    gp = getappdata(f,'soft_params');
+        set(terrainLabel,'String','Terreno: morbido');
+        gp = getappdata(f,'soft_params');
     else
-    gp = getappdata(f,'hard_params');
+        set(terrainLabel,'String','Terreno: duro');
+        gp = getappdata(f,'hard_params');
     end
     % aggiorna p con le proprietà del suolo
     p.E2              = gp.E2;
