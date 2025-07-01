@@ -45,8 +45,6 @@ p.ytarget = y0;
 p.yinit   = y0;
 
 % Parameters per gestione contatto e integrazione
-p.ground_stiffness = 1000; % stiffness del terreno
-p.ground_damping  = 50;     % damping terreno
 p.penetration_max = 0.05;   % penetrazione massima ammessa
 p.dt_max          = 0.01;   % passo dt massimo nel loop
 p.enable_constraint = false; % Abilita vincolo orizzontale
@@ -58,6 +56,25 @@ end
 % Parametri traiettoria semicirconferenza + estensione
 p.theta_start = 0;
 p.theta_end   = pi;
+
+% Proprietà materiale (end-effector vs suolo)
+p.E1  = 210e9;    % modulo di Young della piastra (steel) [Pa] https://www.youmath.it/lezioni/fisica/dinamica/3032-modulo-di-young.html
+p.nu1 = 0.3;      % coeff. di Poisson https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
+p.R1  = 0.05;     % raggio di curvatura dell'end-effector [m]
+
+p.softParams = struct( ...
+  'E2', 1e7, ...        % Young del suolo (gomma) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
+  'nu2',0.45, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
+  'R2', Inf, ...        % piano
+  'e', 0.6 ...          % restitution
+);
+
+p.hardParams = struct( ...
+  'E2', 9e9, ...        % Young (basalto) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
+  'nu2', 0.5, ...            % Poisson del suolo (basalto) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
+  'R2', Inf, ...
+  'e', 0.6 ...
+);
 
 % Avvia animazione & integrazione
 Plotter(p);

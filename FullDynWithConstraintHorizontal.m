@@ -26,14 +26,20 @@ tau = [T1; T2];
 % Calcolo anche il ground_damping
 Jn = J(2,:);    % 1×2
 m_eff = 1 / ( Jn * (M \ Jn') );
-ground_damping   = 0.2 * 2*sqrt(p.ground_stiffness*m_eff); 
 
+[k_HC, c_HC] = computeGroundHC( ...
+    p.E1, p.nu1, p.R1, ...
+    p.E2, p.nu2, p.R2, ...
+    p.e_restitution, m_eff); 
+disp('Parametri Hunt-Crossley:');
+disp(['Stiffness: ', num2str(k_HC)]);
+disp(['Damping: ', num2str(c_HC)]);
 % Parametri terreno per la funzione GroundConstraint
 params_terreno.yinit = p.yinit;
 params_terreno.epsilon = 1e-3;
-params_terreno.stiffness = p.ground_stiffness;
+params_terreno.stiffness = k_HC;
 params_terreno.n = 1.5;  % esponente per il modello Hunt-Crossley
-params_terreno.damping = ground_damping;
+params_terreno.damping = c_HC;
 params_terreno.lambda_max = MaxEndEffectorForce(z,p);
 
 % Vincolo attivo solo se p.enable_constraint == true

@@ -140,14 +140,17 @@ set(btn, 'Enable', 'on');
 uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
     'Position', [20 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 2e7)));
+    'Callback', @(src, event) setappdata(f,'ground_type','hard'));
 % Pulsante terreno morbido
 uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
     'Position', [160 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) setappdata(f, 'ground_params', struct('stiffness', 8e4)));
+    'Callback', @(src, event) setappdata(f,'ground_type','soft'));
 % Imposta valori di default all'avvio (terreno duro)
-setappdata(f, 'ground_params', struct('stiffness', 2e7));
+% imposta default “soft”
+setappdata(f,'ground_type','hard');
+setappdata(f,'soft_params', p.softParams);
+setappdata(f,'hard_params', p.hardParams);
 
 set(link1, 'HitTest','off', 'PickableParts','none');
 set(link2, 'HitTest','off', 'PickableParts','none');
@@ -161,9 +164,6 @@ while (ishandle(f))
     %%%% INTEGRATION %%%%
     tnew = toc;
     dt = tnew - told;
-    % Aggiorna i parametri terreno da GUI
-    ground_params = getappdata(f, 'ground_params');
-    p.ground_stiffness = ground_params.stiffness;
 
     % === TRAIETTORIA AUTOMATICA ===
     traj_active = getappdata(f, 'traj_active');
@@ -215,6 +215,20 @@ while (ishandle(f))
     vold = [z1(2),z1(4)];
     % Recupera stato vincolo
     p.enable_constraint = getappdata(f, 'enable_constraint');
+    % recupera il tipo
+    gtype = getappdata(f,'ground_type');
+    if strcmp(gtype,'soft')
+    gp = getappdata(f,'soft_params');
+    else
+    gp = getappdata(f,'hard_params');
+    end
+    % aggiorna p con le proprietà del suolo
+    p.E2              = gp.E2;
+    p.nu2             = gp.nu2;
+    p.R2              = gp.R2;
+    p.e_restitution   = gp.e;
+
+
     [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(z1,p);
     set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
     vinter1 = [zdot1(1),zdot1(3)];
