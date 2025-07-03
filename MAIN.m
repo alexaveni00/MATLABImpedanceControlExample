@@ -31,7 +31,6 @@ p.I2 = 1/12*p.m2*p.l2^2;
 % Forward kinematics to get initial end-effector pos
 endZ = ForwardKin(p.l1,p.l2,p.init(1),p.init(3));
 x0 = endZ(1);  y0 = endZ(2);
-p.Fx = 0;      p.Fy = 0;
 
 %%%%%%%% Control Parameters %%%%%%%%
 J0 = JacobianEndeffector(p.l1,p.l2,p.init(1),p.init(3));

@@ -13,7 +13,7 @@ x_ee = pos(1); y_ee = pos(2);
 J = JacobianEndeffector(p.l1, p.l2, th1, th2);
 
 % Calcola velocità verticale end-effector
-v_ee = J * [thdot1; thdot2];
+v_ee = J * qdot;
 v_ee_y = v_ee(2);
 
 % Torques di controllo e dinamica non vincolata
