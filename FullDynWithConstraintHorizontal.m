@@ -31,16 +31,23 @@ m_eff = 1 / ( Jn * (M \ Jn') );
     p.E1, p.nu1, p.R1, ...
     p.E2, p.nu2, p.R2, ...
     p.e_restitution, m_eff); 
-disp('Parametri Hunt-Crossley:');
-disp(['Stiffness: ', num2str(k_HC)]);
-disp(['Damping: ', num2str(c_HC)]);
 % Parametri terreno per la funzione GroundConstraint
 params_terreno.yinit = p.yinit;
 params_terreno.epsilon = 1e-3;
 params_terreno.stiffness = k_HC;
 params_terreno.n = 1.5;  % esponente per il modello Hunt-Crossley
 params_terreno.damping = c_HC;
-params_terreno.lambda_max = MaxEndEffectorForce(z,p);
+
+persistent lambda_max_persist
+if isempty(lambda_max_persist)
+    lambda_max_persist = [];
+end
+
+% Calcola lambda_max solo al primo contatto
+if isempty(lambda_max_persist)
+    lambda_max_persist = MaxEndEffectorForce(z, p);
+end
+params_terreno.lambda_max = lambda_max_persist;
 
 % Vincolo attivo solo se p.enable_constraint == true
 if isfield(p, 'enable_constraint') && p.enable_constraint

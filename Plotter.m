@@ -138,12 +138,12 @@ set(btn, 'Enable', 'on');
 uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
     'Position', [20 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) setappdata(f,'ground_type','hard'));
+    'Callback', @(src, event) changeGroundType(f, 'hard'));
 % Pulsante terreno morbido
 uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
     'Position', [160 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) setappdata(f,'ground_type','soft'));
+    'Callback', @(src, event) changeGroundType(f, 'soft'));
 % Imposta valori di default all'avvio (terreno duro)
 % imposta default “soft”
 setappdata(f,'ground_type','hard');
@@ -322,4 +322,9 @@ function plotDebugLine(lineHandle, xlimVals, y_value)
     if ishandle(lineHandle)
         set(lineHandle, 'XData', xlimVals, 'YData', [y_value, y_value]);
     end
+end
+
+function changeGroundType(f, type)
+    setappdata(f, 'ground_type', type);
+    clear FullDynWithConstraintHorizontal
 end
