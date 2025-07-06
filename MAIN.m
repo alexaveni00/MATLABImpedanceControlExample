@@ -33,10 +33,7 @@ endZ = ForwardKin(p.l1,p.l2,p.init(1),p.init(3));
 x0 = endZ(1);  y0 = endZ(2);
 
 %%%%%%%% Control Parameters %%%%%%%%
-J0 = JacobianEndeffector(p.l1,p.l2,p.init(1),p.init(3));
-qdot0 = [p.init(2); p.init(4)];
-v_ee0 = J0*qdot0; vel_ee0_mod = norm(v_ee0);
-[p.Kp, p.Kd] = computeKpKd(vel_ee0_mod);
+[p.Kp, p.Kd] = computeKpKd(p.init(4)); % calcola Kp e Kd in base alla velocità angolare iniziale del giunto del "ginocchio" (thdot2)
 
 % Single target at initial position
 p.xtarget = x0;
@@ -62,17 +59,17 @@ p.nu1 = 0.3;      % coeff. di Poisson https://www.youmath.it/lezioni/fisica/dina
 p.R1  = 0.05;     % raggio di curvatura dell'end-effector [m]
 
 p.softParams = struct( ...
-  'E2', 1e7, ...        % Young del suolo (gomma) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
-  'nu2',0.45, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
+  'E2', 10e9, ...        % Young del suolo (gomma) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
+  'nu2',0.10, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
   'R2', Inf, ...        % piano
-  'e', 0.6 ...          % restitution
+  'e', 0.45 ...          % restitution
 );
 
 p.hardParams = struct( ...
-  'E2', 9e9, ...        % Young (basalto) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
-  'nu2', 0.5, ...            % Poisson del suolo (basalto) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
+  'E2', 1e6, ...        % Young (legno) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
+  'nu2', 0.4, ...            % Poisson del suolo (legno) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
   'R2', Inf, ...
-  'e', 0.6 ...
+  'e', 0.35 ...
 );
 
 % Avvia animazione & integrazione

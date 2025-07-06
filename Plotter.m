@@ -242,11 +242,7 @@ while (ishandle(f))
     xnew = xold + vinter2*dt;
     vnew = (xnew-xold)/dt;
     % Calcola la velocità end-effector attuale (modulo)
-    J = JacobianEndeffector(p.l1, p.l2, z1(1), z1(3));
-    qdot = [z1(2); z1(4)];
-    v_ee = J * qdot;
-    vel_ee = norm(v_ee); % modulo della velocità end-effector
-    [p.Kp, p.Kd] = computeKpKd(vel_ee);
+    [p.Kp, p.Kd] = computeKpKd(z1(4)); % Aggiorna Kp e Kd in base alla velocità angolare del giunto del "ginocchio" (thdot2)
     z2 = [xnew(1) vnew(1) xnew(2) vnew(2)];
     z1 = z2;
     told = tnew;
