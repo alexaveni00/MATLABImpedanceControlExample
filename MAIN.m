@@ -41,8 +41,6 @@ p.ytarget = y0;
 p.yinit   = y0;
 
 % Parameters per gestione contatto e integrazione
-p.penetration_max = 0.05;   % penetrazione massima ammessa
-p.dt_max          = 0.01;   % passo dt massimo nel loop
 p.enable_constraint = false; % Abilita vincolo orizzontale
 if rederive
     deriverRelativeAngles;

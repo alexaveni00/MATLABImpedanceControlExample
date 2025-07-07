@@ -5,7 +5,7 @@ function [Kp, Kd] = computeKpKd(thetadot)
     %
     % - Kp è tenuto costante (come nei test riportati nell'articolo).
     % - Kd viene modulato dinamicamente in funzione della velocità verticale thetadot
-    %   usando una funzione sigmoide come descritto nella sezione relativa alla Figura 9.
+    %   usando una funzione sigmoide
     %
     % INPUT:
     %   thetadot - velocità verticale del piede [m/s] (SCALARE)
