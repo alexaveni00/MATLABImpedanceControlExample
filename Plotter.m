@@ -128,6 +128,8 @@ lambdaText = text(0.6, -3.6, 'lambda: 0.00', 'FontSize', 18, 'Color', [0.2 0.2 0
 % === Variabile di stato per la traiettoria (usata con setappdata/getappdata) ===
 setappdata(f, 'traj_active', false);
 setappdata(f, 'traj_theta', 0);
+setappdata(f, 'contatto_attivo', false);  % inizialmente il contatto è disabilitato
+
 
 % Pulsante per avviare/ripartire la traiettoria
 btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
@@ -135,20 +137,23 @@ btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
 set(btn, 'Enable', 'on');
 
 % Pulsante terreno duro
-uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
+btnHard = uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
     'Position', [20 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundType(f, 'hard'));
+    'Callback', @(src, event) changeGroundTypeAndRestart(f, 'hard'));
+
 % Pulsante terreno morbido
-uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
+btnSoft = uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
     'Position', [160 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundType(f, 'soft'));
-% Imposta valori di default all'avvio (terreno duro)
+    'Callback', @(src, event) changeGroundTypeAndRestart(f, 'soft'));
 % imposta default “soft”
 setappdata(f,'ground_type','hard');
 setappdata(f,'soft_params', p.softParams);
 setappdata(f,'hard_params', p.hardParams);
+figData.btnHard = btnHard;
+figData.btnSoft = btnSoft;
+set(f,'UserData',figData);
 
 % Label dinamica per tipo terreno
 terrainLabel = uicontrol('Style','text','String','Terreno: duro', ...
@@ -191,6 +196,9 @@ while (ishandle(f))
             figData.ytarget = figData.ytarget - 0.1;
             setappdata(f, 'traj_active', false);
             set(btn, 'Enable', 'on');
+            set(btnHard, 'Enable', 'on');
+            set(btnSoft, 'Enable', 'on');
+            setappdata(f, 'contatto_attivo', true);
         end
     end
     
@@ -233,7 +241,7 @@ while (ishandle(f))
     p.R2              = gp.R2;
     p.e_restitution   = gp.e;
 
-
+    p.fig = f; % Passa il handle della figura
     [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(z1,p);
     set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
     vinter1 = [zdot1(1),zdot1(3)];
@@ -292,11 +300,17 @@ end
 end
 
 function restartTrajectory(~,~,f)
-    setappdata(f, 'enable_constraint', true); % Abilita vincolo orizzontale
-    setappdata(f, 'traj_active', true);
+    figData = get(f, 'UserData');
+    setappdata(f, 'enable_constraint', true);  % abilita vincolo orizzontale
+    setappdata(f, 'traj_active', true);        % attiva traiettoria
     setappdata(f, 'traj_theta', 0);
+    setappdata(f, 'contatto_attivo', false);   % disattiva contatto fino a fine traiettoria
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
+    set(figData.btnHard, 'Enable', 'off');
+    set(figData.btnSoft, 'Enable', 'off');
+    resetLambdaMax();  % azzera valore lambda_max_persist
 end
+
 
 function plotTargetTrace(tracePlot, traceX, traceY)
 % plotTargetTrace - Aggiorna la traccia del target nella figura
@@ -320,7 +334,12 @@ function plotDebugLine(lineHandle, xlimVals, y_value)
     end
 end
 
-function changeGroundType(f, type)
+function changeGroundTypeAndRestart(f, type)
     setappdata(f, 'ground_type', type);
     clear FullDynWithConstraintHorizontal
+    restartTrajectory([], [], f); % Simula il click su "Avvia Traiettoria"
+end
+
+function resetLambdaMax()
+    clear FullDynWithConstraintHorizontal  % resetta i persistent
 end

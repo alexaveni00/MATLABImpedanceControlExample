@@ -38,16 +38,31 @@ params_terreno.stiffness = k_HC;
 params_terreno.n = 1.5;  % esponente per il modello Hunt-Crossley
 params_terreno.damping = c_HC;
 
-persistent lambda_max_persist
+persistent lambda_max_persist contact_detected
+
 if isempty(lambda_max_persist)
-    lambda_max_persist = [];
+    lambda_max_persist = 0;
+end
+if isempty(contact_detected)
+    contact_detected = false;
 end
 
-% Calcola lambda_max solo al primo contatto
-if isempty(lambda_max_persist)
-    lambda_max_persist = MaxEndEffectorForce(z, p);
+% Legge lo stato di contatto solo se è disponibile il riferimento alla figura
+if isfield(p, 'fig') && ishandle(p.fig)
+    contatto_attivo = getappdata(p.fig, 'contatto_attivo');
+else
+    contatto_attivo = true;  % se manca il campo, per sicurezza lo attiviamo
 end
+
+% Esegue il calcolo solo se abilitato
+if ~contact_detected && contatto_attivo && y_ee <= p.yinit && v_ee_y < 0
+    lambda_max_persist = MaxEndEffectorForce(z, p);
+    contact_detected = true;
+    fprintf('[INFO] Primo contatto rilevato: lambda_max = %.2f\n', lambda_max_persist);
+end
+
 params_terreno.lambda_max = lambda_max_persist;
+
 
 % Vincolo attivo solo se p.enable_constraint == true
 if isfield(p, 'enable_constraint') && p.enable_constraint
