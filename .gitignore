@@ -39,3 +39,5 @@ Thumbs.db
 # Other MATLAB
 *.m~
 backup
+appunti.m
+EXPORT_ALL_CODE.txt
