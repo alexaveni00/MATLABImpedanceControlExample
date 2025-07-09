@@ -178,7 +178,7 @@ while (ishandle(f))
     if autoTrajectory && traj_active
         [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
         traj_theta = traj_theta + vel_angolare * dt;
-        if traj_theta <= traj_theta_end
+       
             figData.xtarget = x_traj;
             figData.ytarget = y_traj;
             if DEBUG_SHOW_TARGET_X
@@ -192,14 +192,6 @@ while (ishandle(f))
                 traceY(end+1) = y_traj;
                 plotTargetTrace(tracePlot, traceX, traceY);
             end
-        else
-            figData.ytarget = figData.ytarget - 0.1;
-            setappdata(f, 'traj_active', false);
-            set(btn, 'Enable', 'on');
-            set(btnHard, 'Enable', 'on');
-            set(btnSoft, 'Enable', 'on');
-            setappdata(f, 'contatto_attivo', true);
-        end
     end
     
     %If there are new mouse click locations, then set those as the new
