@@ -47,10 +47,6 @@ if rederive
     disp('Equazioni rederive.');
 end
 
-% Parametri traiettoria semicirconferenza + estensione
-p.theta_start = 0;
-p.theta_end   = 2*pi;
-
 % Proprietà materiale (end-effector vs suolo)
 p.E1  = 210e9;    % modulo di Young della piastra (steel) [Pa] https://www.youmath.it/lezioni/fisica/dinamica/3032-modulo-di-young.html
 p.nu1 = 0.3;      % coeff. di Poisson https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html

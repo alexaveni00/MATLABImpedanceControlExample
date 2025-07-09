@@ -115,10 +115,6 @@ vel_angolare = pi/2; % velocità angolare [rad/s]
 x_c = p.xtarget;
 y_c = p.ytarget; % sposta in basso
 
-% Usa i limiti definiti nel main
-traj_theta_start = p.theta_start;
-traj_theta_end = p.theta_end;
-
 % Tracker per Kp, Kd, velocità end-effector e lambda
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
