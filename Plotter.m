@@ -129,20 +129,20 @@ setappdata(f, 'contatto_attivo', false);  % inizialmente il contatto è disabili
 
 % Pulsante per avviare/ripartire la traiettoria
 btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
-    'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@restartTrajectory, f});
+    'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@startTrajectory, f});
 set(btn, 'Enable', 'on');
 
 % Pulsante terreno duro
 btnHard = uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
     'Position', [20 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundTypeAndRestart(f, 'hard'));
+    'Callback', @(src, event) changeGroundType(f, 'hard'));
 
 % Pulsante terreno morbido
 btnSoft = uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
     'Position', [160 520 120 30], ...
     'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundTypeAndRestart(f, 'soft'));
+    'Callback', @(src, event) changeGroundType(f, 'soft'));
 % imposta default “soft”
 setappdata(f,'ground_type','hard');
 setappdata(f,'soft_params', p.softParams);
@@ -287,7 +287,7 @@ while (ishandle(f))
 end
 end
 
-function restartTrajectory(~,~,f)
+function startTrajectory(~,~,f)
     figData = get(f, 'UserData');
     setappdata(f, 'enable_constraint', true);  % abilita vincolo orizzontale
     setappdata(f, 'traj_active', true);        % attiva traiettoria
@@ -296,7 +296,6 @@ function restartTrajectory(~,~,f)
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
     set(figData.btnHard, 'Enable', 'off');
     set(figData.btnSoft, 'Enable', 'off');
-    resetLambdaMax();  % azzera valore lambda_max_persist
 end
 
 
@@ -322,12 +321,6 @@ function plotDebugLine(lineHandle, xlimVals, y_value)
     end
 end
 
-function changeGroundTypeAndRestart(f, type)
+function changeGroundType(f, type)
     setappdata(f, 'ground_type', type);
-    clear FullDynWithConstraintHorizontal
-    restartTrajectory([], [], f); % Simula il click su "Avvia Traiettoria"
-end
-
-function resetLambdaMax()
-    clear FullDynWithConstraintHorizontal  % resetta i persistent
 end
