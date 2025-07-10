@@ -49,11 +49,7 @@ end
 if vincolo_attivo
     F_ext = [0; -min(lambda, params_terreno.lambda_max)];
     tau_constraint = J' * F_ext;
-    if rcond(M) < 1e-8 || any(isnan(M(:))) || any(isinf(M(:)))
-        qddot = [0;0];
-    else
-        qddot = M \ (tau - C - G + tau_constraint);
-    end
+    qddot = M \ (tau - C - G + tau_constraint);
     zdot = [thdot1; qddot(1); thdot2; qddot(2)];
 else
     zdot = zdot_free;

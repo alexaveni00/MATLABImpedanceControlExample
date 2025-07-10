@@ -22,7 +22,7 @@ p.init = [-2*pi/3; 0; -pi/2; 0];
 
 % Physical constants
 p.g = 9.81;
-p.m1 = 0.5; p.m2 = 0.5;
+p.m1 = 2; p.m2 = 2;
 p.l1 = 1;   p.l2 = 1;
 p.d1 = p.l1/2; p.d2 = p.l2/2;
 p.I1 = 1/12*p.m1*p.l1^2;

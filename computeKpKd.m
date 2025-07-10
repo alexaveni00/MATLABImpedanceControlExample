@@ -15,10 +15,10 @@ function [Kp, Kd] = computeKpKd(thetadot)
     %   Kd - guadagno derivativo adattivo [Ns/m]
     
     % Guadagno proporzionale fisso
-    Kp = 150; 
+    Kp = 75; 
     
     % --- Guadagno derivativo adattivo ---
-    Kd0 = 6;   % valore base di smorzamento
+    Kd0 = 10;   % valore base di smorzamento
     deltaKd = 9;   % valore massimo di smorzamento durante l'impatto
     Zs = 50;        % pendenza della sigmoide (più grande = transizione più rapida)
     
