@@ -54,7 +54,9 @@ params.damping    = c_HC;
 params.lambda_max = MaxEndEffectorForce(z, p);
 
 % Compute penetration and reaction
-lambda = 0; active = false; info = struct();
+lambda = 0;
+zdot   = zdot_free;
+active = false; info = struct();
 if isfield(p,'enable_constraint') && p.enable_constraint
     [lambda, active, info] = GroundConstraint(y_rot, vd_rot, params);
 end
@@ -66,8 +68,4 @@ if active
     tau_constraint = J' * F_base;
     qddot = M \ (tau - C - G + tau_constraint);
     zdot  = [thdot1; qddot(1); thdot2; qddot(2)];
-else
-    zdot = zdot_free;
-    lambda = 0;
-end
 end

@@ -151,10 +151,19 @@ angleSlider = uicontrol('Style','slider', ...
     'Position',[20 480 200 20], ...
     'Callback', @(src,~) setappdata(f,'ground_angle', get(src,'Value')));
 uicontrol('Style','text','Position',[230 480 60 20],'String','Angolo [rad]');
+% ---> slider per l’altezza del terreno
+heightSlider = uicontrol('Style','slider', ...
+    'Min',-4,'Max',4,'Value', p.yinit, ...    % regola i limiti in base al tuo asse Y
+    'Position',[20 440 200 20], ...
+    'Callback', @(src,~) setappdata(f,'ground_height', get(src,'Value')));
+uicontrol('Style','text','Position',[230 440 80 20],'String','Altezza [m]');
+
+setappdata(f, 'ground_angle', p.ground_angle);
+setappdata(f,'ground_height', p.yinit);
 
 figData.angleSlider = angleSlider;
+figData.heightSlider = heightSlider;
 % Imposta valore iniziale del ground_angle in appdata
-setappdata(f, 'ground_angle', p.ground_angle);
 set(f,'UserData',figData);
 
 % Label dinamica per tipo terreno
@@ -217,6 +226,11 @@ while (ishandle(f))
     %Old velocity and position
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
+    % Recupera altezza del terreno
+    gh = getappdata(f,'ground_height');
+    p.yinit = gh;   % aggiorna p.yinit per la dinamica
+
+
     % Recupera stato vincolo
     p.enable_constraint = getappdata(f, 'enable_constraint');
     % recupera il tipo
@@ -291,17 +305,17 @@ while (ishandle(f))
     v_ee = J * qdot;
     set(velText, 'String', sprintf('Vel: [%.2f, %.2f]', v_ee(1), v_ee(2)));
     if DEBUG_CONSTRAINT_LINE
-    % 1) Prendi i limiti X dell’asse di simulazione
-    xl = xlim(figData.simArea);
-    % 2) Definisci la “terra” come retta y_rot = p.yinit in frame inclinato
-    xrot = [xl(1), xl(2)];
-    yrot = [p.yinit, p.yinit];
-    % 3) Riporta i punti nel frame base con la rotazione inversa R' = [ cos  sin; -sin  cos ]
-    ca = cos(gangle); sa = sin(gangle);
-    pts = [ ca  sa; -sa  ca ] * [xrot; yrot];
-    % 4) Aggiorna il plot
-    set(constraintLine, 'XData', pts(1,:), 'YData', pts(2,:));
-end
+        % 1) Prendi i limiti X dell’asse di simulazione
+        xl = xlim(figData.simArea);
+        % 2) Definisci la “terra” come retta y_rot = p.yinit in frame inclinato
+        xrot = [xl(1), xl(2)];
+        yrot = [gh, gh];
+        % 3) Riporta i punti nel frame base con la rotazione inversa R' = [ cos  sin; -sin  cos ]
+        ca = cos(gangle); sa = sin(gangle);
+        pts = [ ca  sa; -sa  ca ] * [xrot; yrot];
+        % 4) Aggiorna il plot
+        set(constraintLine, 'XData', pts(1,:), 'YData', pts(2,:));
+    end
 
     drawnow;
 end
