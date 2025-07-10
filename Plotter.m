@@ -75,10 +75,6 @@ tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 10, 'DisplayName', 'Target Trace'
 % Vincolo: retta orizzontale passante per il punto di inizio traiettoria
 DEBUG_CONSTRAINT_LINE = true; % imposta a false per nascondere la retta
 constraintLine = plot(nan, nan, 'k-', 'LineWidth', 1, 'DisplayName', 'Constraint Line');
-if DEBUG_CONSTRAINT_LINE
-    plotDebugLine(constraintLine, xlim, p.yinit);
-end
-
 hold off
 
 %Make the whole window big for handy viewing:
@@ -149,6 +145,16 @@ setappdata(f,'soft_params', p.softParams);
 setappdata(f,'hard_params', p.hardParams);
 figData.btnHard = btnHard;
 figData.btnSoft = btnSoft;
+% ---> slider per angolo terreno
+angleSlider = uicontrol('Style','slider', ...
+    'Min',-pi/2,'Max',pi/2,'Value',p.ground_angle, ...
+    'Position',[20 480 200 20], ...
+    'Callback', @(src,~) setappdata(f,'ground_angle', get(src,'Value')));
+uicontrol('Style','text','Position',[230 480 60 20],'String','Angolo [rad]');
+
+figData.angleSlider = angleSlider;
+% Imposta valore iniziale del ground_angle in appdata
+setappdata(f, 'ground_angle', p.ground_angle);
 set(f,'UserData',figData);
 
 % Label dinamica per tipo terreno
@@ -215,6 +221,7 @@ while (ishandle(f))
     p.enable_constraint = getappdata(f, 'enable_constraint');
     % recupera il tipo
     gtype = getappdata(f,'ground_type');
+    gangle = getappdata(f, 'ground_angle');
     % Aggiorna label terreno
     if strcmp(gtype,'soft')
         set(terrainLabel,'String','Terreno: morbido');
@@ -283,6 +290,19 @@ while (ishandle(f))
     qdot = [z1(2); z1(4)];
     v_ee = J * qdot;
     set(velText, 'String', sprintf('Vel: [%.2f, %.2f]', v_ee(1), v_ee(2)));
+    if DEBUG_CONSTRAINT_LINE
+    % 1) Prendi i limiti X dell’asse di simulazione
+    xl = xlim(figData.simArea);
+    % 2) Definisci la “terra” come retta y_rot = p.yinit in frame inclinato
+    xrot = [xl(1), xl(2)];
+    yrot = [p.yinit, p.yinit];
+    % 3) Riporta i punti nel frame base con la rotazione inversa R' = [ cos  sin; -sin  cos ]
+    ca = cos(gangle); sa = sin(gangle);
+    pts = [ ca  sa; -sa  ca ] * [xrot; yrot];
+    % 4) Aggiorna il plot
+    set(constraintLine, 'XData', pts(1,:), 'YData', pts(2,:));
+end
+
     drawnow;
 end
 end
@@ -310,17 +330,6 @@ function plotTargetTrace(tracePlot, traceX, traceY)
         set(tracePlot, 'XData', traceX, 'YData', traceY);
     end
 end
-
-function plotDebugLine(lineHandle, xlimVals, y_value)
-% plotDebugLine - Disegna una retta orizzontale su tutto l'asse a quota y_value
-    if nargin < 3
-        error('plotDebugLine richiede lineHandle, xlimVals, y_value');
-    end
-    if ishandle(lineHandle)
-        set(lineHandle, 'XData', xlimVals, 'YData', [y_value, y_value]);
-    end
-end
-
 function changeGroundType(f, type)
     setappdata(f, 'ground_type', type);
 end

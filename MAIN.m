@@ -12,7 +12,6 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; close all;
-clear all;
 
 rederive = false;
 %%%%%%%% System Parameters %%%%%%%%
@@ -39,7 +38,7 @@ x0 = endZ(1);  y0 = endZ(2);
 p.xtarget = x0;
 p.ytarget = y0;
 p.yinit   = y0;
-
+p.ground_angle = 0; % angolo iniziale del terreno (orizzontale)
 % Parameters per gestione contatto e integrazione
 p.enable_constraint = false; % Abilita vincolo orizzontale
 if rederive

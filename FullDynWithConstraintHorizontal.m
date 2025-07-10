@@ -1,56 +1,71 @@
-function [zdot, T1, T2, lambda] = FullDynWithConstraintHorizontal(z, p)
-% Dinamica con vincolo orizzontale y = p.yinit (vincolo attivo solo se y_ee < p.yinit)
-% z = [th1; thdot1; th2; thdot2]
+function [zdot, T1, T2, lambda] = FullDynWithInclinedGround(z, p)
+% FullDynWithInclinedGround Dynamics with inclined ground constraint
+%  z = [th1; thdot1; th2; thdot2]
 
-th1 = z(1); thdot1 = z(2);
-th2 = z(3); thdot2 = z(4);
-q = [th1; th2];
-qdot = [thdot1; thdot2];
+% Extract states
+th1    = z(1);  thdot1 = z(2);
+th2    = z(3);  thdot2 = z(4);
+q      = [th1; th2];
+qdot   = [thdot1; thdot2];
 
-% Cinematica diretta e Jacobiano
+% === 1) Normalize coordinates w.r.t. ground inclination ===
+alpha = getappdata(p.fig, 'ground_angle');
+ca    = cos(alpha);
+sa    = sin(alpha);
+
+% Position and velocity of end-effector in base frame
 pos = ForwardKin(p.l1, p.l2, th1, th2);
-x_ee = pos(1); y_ee = pos(2);
-J = JacobianEndeffector(p.l1, p.l2, th1, th2);
+J   = JacobianEndeffector(p.l1, p.l2, th1, th2);
+v   = J * qdot;
 
-% Calcola velocità verticale end-effector
-v_ee = J * qdot;
-v_ee_y = v_ee(2);
+% Extract components
+x0 = pos(1);  y0 = pos(2);
+vx = v(1);    vy = v(2);
 
-% Torques di controllo e dinamica non vincolata
+% Rotate manually to avoid dimension mismatch
+px  =  ca*x0 - sa*y0;
+py  =  sa*x0 + ca*y0;
+vnx =  ca*vx - sa*vy;
+vny =  sa*vx + ca*vy;
+
+y_rot  = py;    % height in inclined frame
+vd_rot = vny;   % velocity normal to ground
+
+% === 2) Unconstrained dynamics and control torques ===
 [zdot_free, T1, T2] = FullDyn(z, p);
 tau = [T1; T2];
-[M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
+[M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, ...
+    p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
 
-% Calcola massa effettiva per il vincolo orizzontale
-% Jn è la riga del Jacobiano relativa alla velocità verticale dell'end-effector
-% Calcolo anche il ground_damping
-Jn = J(2,:);    % 1×2
-m_eff = 1 / ( Jn * (M \ Jn') );
+% === 3) Viscoelastic contact in inclined frame ===
+% Effective mass approximated using vertical Jacobian (row 2)
+Jn   = J(2,:);                % fallback normal component
+m_eff= 1 / (Jn * (M \ Jn'));
 
-[k_HC, c_HC] = computeGroundHC( ...
-    p.E1, p.nu1, p.R1, ...
-    p.E2, p.nu2, p.R2, ...
-    p.e_restitution, m_eff); 
-% Parametri terreno per la funzione GroundConstraint
-params_terreno.yinit = p.yinit;
-params_terreno.epsilon = 1e-3;
-params_terreno.stiffness = k_HC;
-params_terreno.n = 1.5;  % esponente per il modello Hunt-Crossley
-params_terreno.damping = c_HC;
-params_terreno.lambda_max = MaxEndEffectorForce(z, p);  % Forza massima verticale al suolo
-% Vincolo attivo solo se p.enable_constraint == true
-if isfield(p, 'enable_constraint') && p.enable_constraint
-    [lambda, vincolo_attivo, info] = GroundConstraint(y_ee, v_ee_y, params_terreno);
-else
-    lambda = 0;
-    vincolo_attivo = false;
+% Hunt–Crossley parameters
+[k_HC, c_HC] = computeGroundHC(p.E1, p.nu1, p.R1, p.E2, p.nu2, p.R2, p.e_restitution, m_eff);
+
+% Ground constraint parameters
+params.yinit      = p.yinit;
+params.epsilon    = 1e-3;
+params.stiffness  = k_HC;
+params.n          = 1.5;
+params.damping    = c_HC;
+params.lambda_max = MaxEndEffectorForce(z, p);
+
+% Compute penetration and reaction
+lambda = 0; active = false; info = struct();
+if isfield(p,'enable_constraint') && p.enable_constraint
+    [lambda, active, info] = GroundConstraint(y_rot, vd_rot, params);
 end
 
-if vincolo_attivo
-    F_ext = [0; -min(lambda, params_terreno.lambda_max)];
-    tau_constraint = J' * F_ext;
+% === 4) Apply constraint force if active ===
+if active
+    % Reaction force (direction perpendicular to original horizontal, approximate)
+    F_base = [0; -lambda];
+    tau_constraint = J' * F_base;
     qddot = M \ (tau - C - G + tau_constraint);
-    zdot = [thdot1; qddot(1); thdot2; qddot(2)];
+    zdot  = [thdot1; qddot(1); thdot2; qddot(2)];
 else
     zdot = zdot_free;
     lambda = 0;
