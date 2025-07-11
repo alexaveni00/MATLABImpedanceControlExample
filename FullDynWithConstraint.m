@@ -1,4 +1,4 @@
-function [zdot, T1, T2, lambda] = FullDynWithInclinedGround(z, p)
+function [zdot, T1, T2, lambda] = FullDynWithConstraint(z, p)
 % FullDynWithInclinedGround Dynamics with inclined ground constraint
 %  z = [th1; thdot1; th2; thdot2]
 
@@ -65,6 +65,7 @@ end
 if active
     % Reaction force (direction perpendicular to original horizontal, approximate)
     F_base = [0; -lambda];
+    display(['FullDynWithConstraint: lambda = ', num2str(lambda), ' (delta = ', num2str(info.penetration), ')']);
     tau_constraint = J' * F_base;
     qddot = M \ (tau - C - G + tau_constraint);
     zdot  = [thdot1; qddot(1); thdot2; qddot(2)];

@@ -52,20 +52,20 @@ p.nu1 = 0.3;      % coeff. di Poisson https://www.youmath.it/lezioni/fisica/dina
 p.R1  = 0.05;     % raggio di curvatura dell'end-effector [m]
 
 p.hardParams = struct( ...
-  'E2', 10e9, ...        % Young del suolo (legno) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
-  'nu2',0.10, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
+  'E2', 210e9, ...        % Young del suolo (legno) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
+  'nu2',0.3, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
   'R2', Inf, ...        % piano
-  'e', 0.45 ...          % restitution
+  'e', 0.6 ...          % restitution
 );
 
 p.softParams = struct( ...
-  'E2', 1e6, ...        % Young (gomma) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
-  'nu2', 0.4, ...            % Poisson del suolo (gomma) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
+  'E2', 2.9e10, ...        % Young (ghiaia) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
+  'nu2', 0.2, ...            % Poisson del suolo (ghiaia) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
   'R2', Inf, ...
-  'e', 0.35 ...
-);
+  'e', 0.61 ...
+  );
 
 % Avvia animazione & integrazione
 Plotter(p);
-%% Inclinare terreno con pulsante runtime
-%% ricalcolo forza massima
+%% ghiaia modulo di Young 2.9*10^10   poisson ratio 0.2  acciaio ghiaia0.61
+

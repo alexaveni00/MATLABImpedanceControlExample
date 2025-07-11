@@ -67,13 +67,12 @@ else
 end
 
 % Traccia del target (debug, creata una sola volta)
-DEBUG_TRAJECTORY_TRACE = false; % imposta a true per attivare la traccia
+DEBUG_TRAJECTORY_TRACE = true; % imposta a true per attivare la traccia
 traceX = [];
 traceY = [];
 tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 10, 'DisplayName', 'Target Trace');
 
 % Vincolo: retta orizzontale passante per il punto di inizio traiettoria
-DEBUG_CONSTRAINT_LINE = true; % imposta a false per nascondere la retta
 constraintLine = plot(nan, nan, 'k-', 'LineWidth', 1, 'DisplayName', 'Constraint Line');
 hold off
 
@@ -140,7 +139,7 @@ btnSoft = uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
     'FontSize', 10, ...
     'Callback', @(src, event) changeGroundType(f, 'soft'));
 % imposta default “soft”
-setappdata(f,'ground_type','hard');
+setappdata(f,'ground_type','soft');
 setappdata(f,'soft_params', p.softParams);
 setappdata(f,'hard_params', p.hardParams);
 figData.btnHard = btnHard;
@@ -176,6 +175,7 @@ set(h1,    'HitTest','off', 'PickableParts','none');
 set(h2,    'HitTest','off', 'PickableParts','none');
 set(targetPt, 'HitTest','off', 'PickableParts','none');
 set(constraintLine, 'HitTest','off', 'PickableParts','none');
+set(tracePlot, 'HitTest', 'off', 'PickableParts', 'none');
 
 while (ishandle(f))
     figData = get(f,'UserData');
@@ -251,7 +251,7 @@ while (ishandle(f))
     p.e_restitution   = gp.e;
 
     p.fig = f; % Passa il handle della figura
-    [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(z1,p);
+    [zdot1, T1, T2, lambda] = FullDynWithConstraint(z1,p);
     set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
@@ -304,19 +304,16 @@ while (ishandle(f))
     qdot = [z1(2); z1(4)];
     v_ee = J * qdot;
     set(velText, 'String', sprintf('Vel: [%.2f, %.2f]', v_ee(1), v_ee(2)));
-    if DEBUG_CONSTRAINT_LINE
-        % 1) Prendi i limiti X dell’asse di simulazione
-        xl = xlim(figData.simArea);
-        % 2) Definisci la “terra” come retta y_rot = p.yinit in frame inclinato
-        xrot = [xl(1), xl(2)];
-        yrot = [gh, gh];
-        % 3) Riporta i punti nel frame base con la rotazione inversa R' = [ cos  sin; -sin  cos ]
-        ca = cos(gangle); sa = sin(gangle);
-        pts = [ ca  sa; -sa  ca ] * [xrot; yrot];
-        % 4) Aggiorna il plot
-        set(constraintLine, 'XData', pts(1,:), 'YData', pts(2,:));
-    end
-
+    % 1) Prendi i limiti X dell’asse di simulazione
+    xl = xlim(figData.simArea);
+    % 2) Definisci la “terra” come retta y_rot = p.yinit in frame inclinato
+    xrot = [xl(1), xl(2)];
+    yrot = [gh, gh];
+    % 3) Riporta i punti nel frame base con la rotazione inversa R' = [ cos  sin; -sin  cos ]
+    ca = cos(gangle); sa = sin(gangle);
+    pts = [ ca  sa; -sa  ca ] * [xrot; yrot];
+    % 4) Aggiorna il plot
+    set(constraintLine, 'XData', pts(1,:), 'YData', pts(2,:));
     drawnow;
 end
 end

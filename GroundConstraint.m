@@ -29,5 +29,4 @@ function [lambda, activeConstraint, info] = GroundConstraint(y_ee, v_ee_y, param
 
     % 5) reazione totale saturata
     lambda = F_spring + F_damp;
-    lambda = min(lambda, params.lambda_max);
 end

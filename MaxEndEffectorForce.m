@@ -25,6 +25,5 @@ function Fmax = MaxEndEffectorForce(z,p)
     % 6) Forza totale trasferibile:
     Ftot = F_resid + F_stat;
 
-    Fmax = norm(Ftot);
-    disp(['MaxEndEffectorForce: Fmax = ' num2str(Fmax)]);
+    Fmax = Ftot(2);
 end
