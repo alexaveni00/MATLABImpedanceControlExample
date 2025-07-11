@@ -325,8 +325,6 @@ function startTrajectory(~,~,f)
     setappdata(f, 'traj_theta', 0);
     setappdata(f, 'contatto_attivo', false);   % disattiva contatto fino a fine traiettoria
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
-    set(figData.btnHard, 'Enable', 'off');
-    set(figData.btnSoft, 'Enable', 'off');
 end
 
 

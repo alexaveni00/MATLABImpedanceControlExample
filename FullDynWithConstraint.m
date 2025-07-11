@@ -45,18 +45,20 @@ m_eff= 1 / (Jn * (M \ Jn'));
 % Hunt–Crossley parameters
 [k_HC, c_HC] = computeGroundHC(p.E1, p.nu1, p.R1, p.E2, p.nu2, p.R2, p.e_restitution, m_eff);
 
+type = getappdata(p.fig, 'ground_type');
+typeLabel = [type 'Params'];
 % Ground constraint parameters
-params.yinit      = p.yinit;
-params.epsilon    = 1e-3;
-params.stiffness  = k_HC;
-params.n          = 1.5;
-params.damping    = c_HC;
-params.lambda_max = MaxEndEffectorForce(z, p);
+params.yinit         = p.yinit;
+params.max_penetration   = p.(typeLabel).max_penetration; % max penetration for active contact
+params.stiffness     = k_HC;
+params.n             = 1.5;
+params.damping       = c_HC;
 
 % Compute penetration and reaction
 lambda = 0;
 zdot   = zdot_free;
-active = false; info = struct();
+active = false; 
+info   = struct();
 if isfield(p,'enable_constraint') && p.enable_constraint
     [lambda, active, info] = GroundConstraint(y_rot, vd_rot, params);
 end
@@ -65,7 +67,6 @@ end
 if active
     % Reaction force (direction perpendicular to original horizontal, approximate)
     F_base = [0; -lambda];
-    display(['FullDynWithConstraint: lambda = ', num2str(lambda), ' (delta = ', num2str(info.penetration), ')']);
     tau_constraint = J' * F_base;
     qddot = M \ (tau - C - G + tau_constraint);
     zdot  = [thdot1; qddot(1); thdot2; qddot(2)];

@@ -12,7 +12,6 @@ function [k_HC, c_HC] = computeGroundHC(E1,nu1,R1, E2,nu2,R2, e, m_eff)
 
     % 2) k di Hunt–Crossley (esponente n=3/2)
     k_HC = (4/3) * E_star * sqrt(R_star); % (formula 2 Lankarani & Nikravesh 1990)
-
     % 3) coefficiente di damping
     % formula da Hunt&Crossley Sez.1.2 
     c_HC = (3/2) * k_HC * ((1 - e^2)/(1 + e)) * sqrt(m_eff / k_HC);

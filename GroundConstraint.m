@@ -3,13 +3,13 @@ function [lambda, activeConstraint, info] = GroundConstraint(y_ee, v_ee_y, param
 %   F = k*delta^n + c*delta^n * v_ee_y
 
     % 1) penetrazione geometrica positiva
-    delta = max(0, params.yinit - y_ee);
+    epsilonToActive = max(0, params.yinit - y_ee);
 
     % 2) attivo se delta supera epsilon
-    activeConstraint = delta > params.epsilon;
+    activeConstraint = epsilonToActive > 1e-3;
 
     % init info
-    info = struct('penetration', delta, ...
+    info = struct('penetration', epsilonToActive, ...
                   'springForce', 0, ...
                   'dampingForce', 0);
 
@@ -20,8 +20,8 @@ function [lambda, activeConstraint, info] = GroundConstraint(y_ee, v_ee_y, param
 
     % 3) calcolo forc e damping non-lineari
     n = params.n;  % es. 1.5 per Hertz
-    F_spring  = params.stiffness * delta^n;
-    F_damp    = params.damping   * delta^n * max(0, -v_ee_y);
+    F_spring  = params.stiffness * params.max_penetration^n;
+    F_damp    = params.damping   * params.max_penetration^n * max(0, -v_ee_y);
 
     % 4) salva info
     info.springForce  = F_spring;
@@ -29,4 +29,5 @@ function [lambda, activeConstraint, info] = GroundConstraint(y_ee, v_ee_y, param
 
     % 5) reazione totale saturata
     lambda = F_spring + F_damp;
+    display(['Ground reaction force: ', num2str(lambda), ' N']);
 end
