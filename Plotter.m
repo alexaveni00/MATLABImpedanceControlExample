@@ -28,6 +28,10 @@ figData.xend = [];
 figData.yend = [];
 figData.fig = f;
 figData.tarControl = true;
+set(f, 'ToolBar', 'none');
+set(f, 'WindowButtonMotionFcn', []);
+set(f, 'WindowButtonDownFcn',   []);
+set(f, 'WindowButtonUpFcn',     []);
 
 %%%%%%%% 1st Subplot -- the pendulum animation %%%%%%%
 figData.simArea = subplot(1,1,1); %Eliminated other subplots, but left this for syntax consistency.
@@ -98,7 +102,6 @@ z1 = p.init;
 told = 0;
 
 set(f,'UserData',figData);
-setappdata(f, 'enable_constraint', p.enable_constraint); % salva stato iniziale
 
 tic %Start the clock
 % === PARAMETRI TRAIETTORIA SEMICIRCONFERENZA ===
@@ -157,6 +160,10 @@ heightSlider = uicontrol('Style','slider', ...
     'Callback', @(src,~) setappdata(f,'ground_height', get(src,'Value')));
 uicontrol('Style','text','Position',[230 440 80 20],'String','Altezza [m]');
 
+btnZoom = uicontrol('Style','togglebutton', ...
+    'String','Zoom', ...
+    'Position',[20 80 60 25], ...
+    'Callback', @(src,~) toggleZoom(src, f) );
 setappdata(f, 'ground_angle', p.ground_angle);
 setappdata(f,'ground_height', p.yinit);
 
@@ -164,6 +171,8 @@ figData.angleSlider = angleSlider;
 figData.heightSlider = heightSlider;
 % Imposta valore iniziale del ground_angle in appdata
 set(f,'UserData',figData);
+
+
 
 % Label dinamica per tipo terreno
 terrainLabel = uicontrol('Style','text','String','Terreno: duro', ...
@@ -341,4 +350,13 @@ function plotTargetTrace(tracePlot, traceX, traceY)
 end
 function changeGroundType(f, type)
     setappdata(f, 'ground_type', type);
+end
+function toggleZoom(btn, figHandle)
+  if get(btn,'Value') == 1
+    zoom(figHandle,'on');
+    set(btn,'BackgroundColor',[0.8 0.8 1]);
+  else
+    zoom(figHandle,'off');
+    set(btn,'BackgroundColor',get(figHandle,'Color'));
+  end
 end

@@ -12,6 +12,7 @@ qdot   = [thdot1; thdot2];
 alpha = getappdata(p.fig, 'ground_angle');
 ca    = cos(alpha);
 sa    = sin(alpha);
+R     = [ca -sa; sa ca];
 
 % Position and velocity of end-effector in base frame
 pos = ForwardKin(p.l1, p.l2, th1, th2);
@@ -33,41 +34,51 @@ vd_rot = vny;   % velocity normal to ground
 
 % === 2) Unconstrained dynamics and control torques ===
 [zdot_free, T1, T2] = FullDyn(z, p);
-tau = [T1; T2];
-[M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, ...
-    p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
+% 1) penetrazione geometrica positiva
+epsilonToActive = max(0, p.yinit - y_rot);
 
-% === 3) Viscoelastic contact in inclined frame ===
-% Effective mass approximated using vertical Jacobian (row 2)
-Jn   = J(2,:);                % fallback normal component
-m_eff= 1 / (Jn * (M \ Jn'));
-
-% Hunt–Crossley parameters
-[k_HC, c_HC] = computeGroundHC(p.E1, p.nu1, p.R1, p.E2, p.nu2, p.R2, p.e_restitution, m_eff);
-
-type = getappdata(p.fig, 'ground_type');
-typeLabel = [type 'Params'];
-% Ground constraint parameters
-params.yinit         = p.yinit;
-params.max_penetration   = p.(typeLabel).max_penetration; % max penetration for active contact
-params.stiffness     = k_HC;
-params.n             = 1.5;
-params.damping       = c_HC;
-
-% Compute penetration and reaction
-lambda = 0;
-zdot   = zdot_free;
-active = false; 
-info   = struct();
-if isfield(p,'enable_constraint') && p.enable_constraint
-    [lambda, active, info] = GroundConstraint(y_rot, vd_rot, params);
+% 2) attivo se delta supera epsilon
+activeConstraint = epsilonToActive > 1e-3;
+if ~activeConstraint
+    lambda = 0;  % no contact, no reaction force
+    zdot = zdot_free;  % use free dynamics
+    return;
 end
 
-% === 4) Apply constraint force if active ===
-if active
-    % Reaction force (direction perpendicular to original horizontal, approximate)
-    F_base = [0; -lambda];
-    tau_constraint = J' * F_base;
-    qddot = M \ (tau - C - G + tau_constraint);
+    tau = [T1; T2];
+    [M, C, G] = MassCoriolisGravity(th1, th2, thdot1, thdot2, ...
+    p.m1, p.m2, p.l1, p.l2, p.d1, p.d2, p.I1, p.I2, p.g);
+
+    % === 3) Viscoelastic contact in inclined frame ===
+    % Effective mass approximated using vertical Jacobian (row 2)
+    Jn   = J(2,:);                % fallback normal component
+    m_eff= 1 / (Jn * (M \ Jn'));
+
+    % Hunt–Crossley parameters
+    [k_HC, c_HC] = computeGroundHC(p.E1, p.nu1, p.R1, p.E2, p.nu2, p.R2, p.e_restitution, m_eff);
+
+    % Ground constraint parameters
+    params.yinit         = p.yinit;
+    params.max_penetration   = HertzPenetration(p.m1+p.m2, k_HC); % max penetration for active contact
+    params.stiffness     = k_HC;
+    params.n             = 1.5;
+    params.damping       = c_HC;
+    params.m_eff        = m_eff;  % effective mass for damping
+    params.penetration = min(HertzPenetration(m_eff, k_HC), params.max_penetration);
+    
+    display(['Ground penetration: ', num2str(params.penetration), ' m']);
+    display(['Max penetration: ', num2str(params.max_penetration), ' m']);
+    if params.penetration > params.max_penetration
+        b = (tau - C - G);
+        lambda = 0;  % no contact force
+    else
+        [lambda, ~] = GroundConstraint(vd_rot, params);
+        F_incl  = [0; -lambda]; % force in inclined frame
+        tau_constraint = J' * F_incl;
+        b = (tau - C - G + tau_constraint);
+    end    
+
+    qddot = M \ b;
+    %qddot = R' * qddot_base;
     zdot  = [thdot1; qddot(1); thdot2; qddot(2)];
 end
