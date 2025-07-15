@@ -45,24 +45,6 @@ if rederive
     disp('Equazioni rederive.');
 end
 
-% Proprietà materiale (end-effector vs suolo)
-p.E1  = 210e9;    % modulo di Young della piastra (steel) [Pa] https://www.youmath.it/lezioni/fisica/dinamica/3032-modulo-di-young.html
-p.nu1 = 0.3;      % coeff. di Poisson https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
-p.R1  = 0.05;     % raggio di curvatura dell'end-effector [m]
-
-p.hardParams = struct( ...
-  'E2', 210e9, ...        % Young del suolo (acciaio) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
-  'nu2',0.3, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
-  'R2', Inf, ...        % piano
-  'e', 0.6 ...          % restitution
-);
-
-p.softParams = struct( ...
-  'E2', 5e6, ...        % Young (ghiaia) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
-  'nu2', 0.45, ...            % Poisson del suolo (ghiaia) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
-  'R2', Inf, ...
-  'e', 0.8 ...
-);
 % Avvia animazione & integrazione
 Plotter(p);
 %% ghiaia modulo di Young 2.9*10^10   poisson ratio 0.2  acciaio ghiaia0.61

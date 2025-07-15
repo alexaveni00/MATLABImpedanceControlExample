@@ -113,11 +113,10 @@ vel_angolare = pi/2; % velocità angolare [rad/s]
 x_c = p.xtarget;
 y_c = p.ytarget; % sposta in basso
 
-% Tracker per Kp, Kd, velocità end-effector e lambda
+% Tracker per Kp, Kd, velocità end-effector
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 velText = text(0.6, -4.0, 'Vel: [0.00, 0.00]', 'FontSize', 18, 'Color', 'g');
-lambdaText = text(0.6, -3.6, 'lambda: 0.00', 'FontSize', 18, 'Color', [0.2 0.2 0.8]);
 
 % === Variabile di stato per la traiettoria (usata con setappdata/getappdata) ===
 setappdata(f, 'traj_active', false);
@@ -130,60 +129,14 @@ btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
     'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@startTrajectory, f});
 set(btn, 'Enable', 'on');
 
-% Pulsante terreno duro
-btnHard = uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
-    'Position', [20 520 120 30], ...
-    'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundType(f, 'hard'));
-
-% Pulsante terreno morbido
-btnSoft = uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
-    'Position', [160 520 120 30], ...
-    'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundType(f, 'soft'));
-% imposta default “soft”
-setappdata(f,'ground_type','soft');
-setappdata(f,'soft_params', p.softParams);
-setappdata(f,'hard_params', p.hardParams);
-figData.btnHard = btnHard;
-figData.btnSoft = btnSoft;
-% ---> slider per angolo terreno
-angleSlider = uicontrol('Style','slider', ...
-    'Min',-pi/2,'Max',pi/2,'Value',p.ground_angle, ...
-    'Position',[20 480 200 20], ...
-    'Callback', @(src,~) setappdata(f,'ground_angle', get(src,'Value')));
-uicontrol('Style','text','Position',[230 480 60 20],'String','Angolo [rad]');
-% ---> slider per l’altezza del terreno
-heightSlider = uicontrol('Style','slider', ...
-    'Min',-4,'Max',4,'Value', p.yinit, ...    % regola i limiti in base al tuo asse Y
-    'Position',[20 440 200 20], ...
-    'Callback', @(src,~) setappdata(f,'ground_height', get(src,'Value')));
-uicontrol('Style','text','Position',[230 440 80 20],'String','Altezza [m]');
-
-btnZoom = uicontrol('Style','togglebutton', ...
-    'String','Zoom', ...
-    'Position',[20 80 60 25], ...
-    'Callback', @(src,~) toggleZoom(src, f) );
-setappdata(f, 'ground_angle', p.ground_angle);
-setappdata(f,'ground_height', p.yinit);
-
-figData.angleSlider = angleSlider;
-figData.heightSlider = heightSlider;
 % Imposta valore iniziale del ground_angle in appdata
 set(f,'UserData',figData);
-
-
-
-% Label dinamica per tipo terreno
-terrainLabel = uicontrol('Style','text','String','Terreno: duro', ...
-    'Position',[300 520 150 30],'FontSize',12,'BackgroundColor',[1 1 1]);
 
 set(link1, 'HitTest','off', 'PickableParts','none');
 set(link2, 'HitTest','off', 'PickableParts','none');
 set(h1,    'HitTest','off', 'PickableParts','none');
 set(h2,    'HitTest','off', 'PickableParts','none');
 set(targetPt, 'HitTest','off', 'PickableParts','none');
-set(constraintLine, 'HitTest','off', 'PickableParts','none');
 set(tracePlot, 'HitTest', 'off', 'PickableParts', 'none');
 
 while (ishandle(f))
@@ -235,33 +188,8 @@ while (ishandle(f))
     %Old velocity and position
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
-    % Recupera altezza del terreno
-    gh = getappdata(f,'ground_height');
-    p.yinit = gh;   % aggiorna p.yinit per la dinamica
-
-
-    % Recupera stato vincolo
-    p.enable_constraint = getappdata(f, 'enable_constraint');
-    % recupera il tipo
-    gtype = getappdata(f,'ground_type');
-    gangle = getappdata(f, 'ground_angle');
-    % Aggiorna label terreno
-    if strcmp(gtype,'soft')
-        set(terrainLabel,'String','Terreno: morbido');
-        gp = getappdata(f,'soft_params');
-    else
-        set(terrainLabel,'String','Terreno: duro');
-        gp = getappdata(f,'hard_params');
-    end
-    % aggiorna p con le proprietà del suolo
-    p.E2              = gp.E2;
-    p.nu2             = gp.nu2;
-    p.R2              = gp.R2;
-    p.e_restitution   = gp.e;
-
     p.fig = f; % Passa il handle della figura
-    [zdot1, T1, T2, lambda] = FullDynWithConstraint(z1,p);
-    set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
+    [zdot1, T1, T2] = FullDyn(z1,p);
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     vinter2 = vold + ainter*dt;
@@ -313,16 +241,6 @@ while (ishandle(f))
     qdot = [z1(2); z1(4)];
     v_ee = J * qdot;
     set(velText, 'String', sprintf('Vel: [%.2f, %.2f]', v_ee(1), v_ee(2)));
-    % 1) Prendi i limiti X dell’asse di simulazione
-    xl = xlim(figData.simArea);
-    % 2) Definisci la “terra” come retta y_rot = p.yinit in frame inclinato
-    xrot = [xl(1), xl(2)];
-    yrot = [gh, gh];
-    % 3) Riporta i punti nel frame base con la rotazione inversa R' = [ cos  sin; -sin  cos ]
-    ca = cos(gangle); sa = sin(gangle);
-    pts = [ ca  sa; -sa  ca ] * [xrot; yrot];
-    % 4) Aggiorna il plot
-    set(constraintLine, 'XData', pts(1,:), 'YData', pts(2,:));
     drawnow;
 end
 end
@@ -347,16 +265,4 @@ function plotTargetTrace(tracePlot, traceX, traceY)
     if ishandle(tracePlot)
         set(tracePlot, 'XData', traceX, 'YData', traceY);
     end
-end
-function changeGroundType(f, type)
-    setappdata(f, 'ground_type', type);
-end
-function toggleZoom(btn, figHandle)
-  if get(btn,'Value') == 1
-    zoom(figHandle,'on');
-    set(btn,'BackgroundColor',[0.8 0.8 1]);
-  else
-    zoom(figHandle,'off');
-    set(btn,'BackgroundColor',get(figHandle,'Color'));
-  end
 end
