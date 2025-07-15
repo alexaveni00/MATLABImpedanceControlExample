@@ -16,6 +16,7 @@ close all
 
 % === DEBUG: mostra la X rossa sul target solo se attivo ===
 DEBUG_SHOW_TARGET_X = false; % Imposta a true per vedere la X rossa
+DEBUG_TRAJECTORY_TRACE = true; % imposta a true per attivare la traccia
 
 %Playback speed:
 % playback = p.animationSpeed;
@@ -71,13 +72,10 @@ else
 end
 
 % Traccia del target (debug, creata una sola volta)
-DEBUG_TRAJECTORY_TRACE = true; % imposta a true per attivare la traccia
 traceX = [];
 traceY = [];
-tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 10, 'DisplayName', 'Target Trace');
+tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 3, 'DisplayName', 'Target Trace');
 
-% Vincolo: retta orizzontale passante per il punto di inizio traiettoria
-constraintLine = plot(nan, nan, 'k-', 'LineWidth', 1, 'DisplayName', 'Constraint Line');
 hold off
 
 %Make the whole window big for handy viewing:
@@ -111,7 +109,7 @@ vel_angolare = pi/2; % velocità angolare [rad/s]
 
 % Centro della semicirconferenza
 x_c = p.xtarget;
-y_c = p.ytarget; % sposta in basso
+y_c = p.ytarget;
 
 % Tracker per Kp, Kd, velocità end-effector
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
@@ -121,8 +119,6 @@ velText = text(0.6, -4.0, 'Vel: [0.00, 0.00]', 'FontSize', 18, 'Color', 'g');
 % === Variabile di stato per la traiettoria (usata con setappdata/getappdata) ===
 setappdata(f, 'traj_active', false);
 setappdata(f, 'traj_theta', 0);
-setappdata(f, 'contatto_attivo', false);  % inizialmente il contatto è disabilitato
-
 
 % Pulsante per avviare/ripartire la traiettoria
 btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
@@ -144,6 +140,29 @@ while (ishandle(f))
     %%%% INTEGRATION %%%%
     tnew = toc;
     dt = tnew - told;
+    
+    %If there are new mouse click locations, then set those as the new
+    %target.
+    if ~isempty(figData.xtarget)
+        p.xtarget = figData.xtarget;
+    end
+    if ~isempty(figData.ytarget)
+        p.ytarget = figData.ytarget;
+    end
+    % Aggiorna la X rossa solo se il debug è attivo
+    if DEBUG_SHOW_TARGET_X
+        set(targetPt,'xData',p.xtarget); %Change the target point graphically.
+        set(targetPt,'yData',p.ytarget);
+        set(targetPt, 'Visible', 'on');
+    else
+        set(targetPt, 'Visible', 'off');
+    end
+
+    % ======= INTEGRAZIONE DINAMICA =======
+    %Old velocity and position
+    xold = [z1(1),z1(3)];
+    vold = [z1(2),z1(4)];
+    p.fig = f; % Passa il handle della figura
 
     % === TRAIETTORIA AUTOMATICA ===
     traj_active = getappdata(f, 'traj_active');
@@ -153,6 +172,7 @@ while (ishandle(f))
         if traj_theta <= pi
             [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
         else
+            [p.Kp, p.Kd] = computeKpKd(z1(4)); % Aggiorna Kp e Kd in base alla velocità angolare del giunto del "ginocchio" (thdot2)
             t_diam = (traj_theta - pi) / vel_angolare; % tempo trascorso nella fase diametro [s]
             T_diam = T_semi;
             t_norm = min(t_diam / T_diam, 1); % normalizza tra 0 e 1
@@ -178,29 +198,6 @@ while (ishandle(f))
             plotTargetTrace(tracePlot, traceX, traceY);
         end
     end
-    
-    %If there are new mouse click locations, then set those as the new
-    %target.
-    if ~isempty(figData.xtarget)
-        p.xtarget = figData.xtarget;
-    end
-    if ~isempty(figData.ytarget)
-        p.ytarget = figData.ytarget;
-    end
-    % Aggiorna la X rossa solo se il debug è attivo
-    if DEBUG_SHOW_TARGET_X
-        set(targetPt,'xData',p.xtarget); %Change the target point graphically.
-        set(targetPt,'yData',p.ytarget);
-        set(targetPt, 'Visible', 'on');
-    else
-        set(targetPt, 'Visible', 'off');
-    end
-
-    % ======= INTEGRAZIONE DINAMICA =======
-    %Old velocity and position
-    xold = [z1(1),z1(3)];
-    vold = [z1(2),z1(4)];
-    p.fig = f; % Passa il handle della figura
     [zdot1, T1, T2] = FullDyn(z1,p);
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
@@ -208,7 +205,6 @@ while (ishandle(f))
     xnew = xold + vinter2*dt;
     vnew = (xnew-xold)/dt;
     % Calcola la velocità end-effector attuale (modulo)
-    [p.Kp, p.Kd] = computeKpKd(z1(4)); % Aggiorna Kp e Kd in base alla velocità angolare del giunto del "ginocchio" (thdot2)
     z2 = [xnew(1) vnew(1) xnew(2) vnew(2)];
     z1 = z2;
     told = tnew;
@@ -258,11 +254,8 @@ end
 end
 
 function startTrajectory(~,~,f)
-    figData = get(f, 'UserData');
-    setappdata(f, 'enable_constraint', true);  % abilita vincolo orizzontale
     setappdata(f, 'traj_active', true);        % attiva traiettoria
     setappdata(f, 'traj_theta', 0);
-    setappdata(f, 'contatto_attivo', false);   % disattiva contatto fino a fine traiettoria
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
 end
 
