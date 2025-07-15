@@ -155,6 +155,24 @@ while (ishandle(f))
     %%%% INTEGRATION %%%%
     tnew = toc;
     dt = tnew - told;
+
+    % === LOG DATI SU CSV ===
+    if isfield(p, 'csv_filename') && ~isempty(p.csv_filename)
+        % Stato attuale
+        th1 = z1(1); th1_dot = z1(2); th2 = z1(3); th2_dot = z1(4);
+        % End-effector
+        ee = ForwardKin(p.l1, p.l2, th1, th2);
+        x_ee = ee(1); y_ee = ee(2);
+        J = JacobianEndeffector(p.l1, p.l2, th1, th2);
+        qdot = [th1_dot; th2_dot];
+        v_ee = J * qdot;
+        % Kp, Kd
+        Kp = p.Kp; Kd = p.Kd;
+        % Torques (T1, T2) disponibili dopo integrazione, quindi li loggo dopo la chiamata a FullDyn
+        % Tempo
+        log_time = tnew;
+        % Salvo i dati dopo la chiamata a FullDyn (vedi sotto)
+    end
     
     %If there are new mouse click locations, then set those as the new
     %target.
@@ -223,6 +241,15 @@ while (ishandle(f))
         end
     end
     [zdot1, T1, T2] = FullDyn(z1,p);
+    % Dopo aver calcolato T1, T2, salvo la riga su CSV
+    if isfield(p, 'csv_filename') && ~isempty(p.csv_filename)
+        fid = fopen(p.csv_filename, 'a');
+        if fid ~= -1
+            fprintf(fid, '%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n', ...
+                log_time, th1, th1_dot, th2, th2_dot, x_ee, y_ee, v_ee(1), v_ee(2), Kp, Kd, T1, T2);
+            fclose(fid);
+        end
+    end
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     vinter2 = vold + ainter*dt;

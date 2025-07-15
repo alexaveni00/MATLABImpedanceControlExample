@@ -46,6 +46,17 @@ if rederive
 end
 
 % Avvia animazione & integrazione
+% === Inizializza file CSV per logging ===
+csv_filename = 'log_dati_simulazione.csv';
+csv_header = {'time', 'th1', 'th1_dot', 'th2', 'th2_dot', 'x_ee', 'y_ee', 'vx_ee', 'vy_ee', 'Kp', 'Kd', 'T1', 'T2'};
+fid = fopen(csv_filename, 'w');
+fprintf(fid, '%s,', csv_header{1:end-1});
+fprintf(fid, '%s\n', csv_header{end});
+fclose(fid);
+
+% Passa il nome del file al Plotter tramite la struct p
+p.csv_filename = csv_filename;
+
 Plotter(p);
 %% ghiaia modulo di Young 2.9*10^10   poisson ratio 0.2  acciaio ghiaia0.61
 
