@@ -48,7 +48,12 @@ end
 % Avvia animazione & integrazione
 % === Inizializza file CSV per logging ===
 csv_filename = 'log_dati_simulazione.csv';
-csv_header = {'time', 'th1', 'th1_dot', 'th2', 'th2_dot', 'x_ee', 'y_ee', 'vx_ee', 'vy_ee', 'Kp', 'Kd', 'T1', 'T2'};
+csv_header = {'time', ...
+    'th1', 'th1_dot', 'th1_ddot', 'T1', ... % Giunto 1
+    'th2', 'th2_dot', 'th2_ddot', 'T2', ... % Giunto 2
+    'x_ee', 'y_ee', 'vx_ee', 'vy_ee', 'ax_ee', 'ay_ee', ... % End-effector
+    'xtarget', 'ytarget', ...
+    'Kp', 'Kd', 'linear_angle'};
 fid = fopen(csv_filename, 'w');
 fprintf(fid, '%s,', csv_header{1:end-1});
 fprintf(fid, '%s\n', csv_header{end});

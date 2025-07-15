@@ -156,23 +156,7 @@ while (ishandle(f))
     tnew = toc;
     dt = tnew - told;
 
-    % === LOG DATI SU CSV ===
-    if isfield(p, 'csv_filename') && ~isempty(p.csv_filename)
-        % Stato attuale
-        th1 = z1(1); th1_dot = z1(2); th2 = z1(3); th2_dot = z1(4);
-        % End-effector
-        ee = ForwardKin(p.l1, p.l2, th1, th2);
-        x_ee = ee(1); y_ee = ee(2);
-        J = JacobianEndeffector(p.l1, p.l2, th1, th2);
-        qdot = [th1_dot; th2_dot];
-        v_ee = J * qdot;
-        % Kp, Kd
-        Kp = p.Kp; Kd = p.Kd;
-        % Torques (T1, T2) disponibili dopo integrazione, quindi li loggo dopo la chiamata a FullDyn
-        % Tempo
-        log_time = tnew;
-        % Salvo i dati dopo la chiamata a FullDyn (vedi sotto)
-    end
+    % LOG DATI SU CSV: ora tutto dopo FullDyn
     
     %If there are new mouse click locations, then set those as the new
     %target.
@@ -241,12 +225,33 @@ while (ishandle(f))
         end
     end
     [zdot1, T1, T2] = FullDyn(z1,p);
-    % Dopo aver calcolato T1, T2, salvo la riga su CSV
+    % === LOG DATI SU CSV ===
     if isfield(p, 'csv_filename') && ~isempty(p.csv_filename)
+        th1 = z1(1); th1_dot = z1(2);
+        th2 = z1(3); th2_dot = z1(4);
+        th1_ddot = zdot1(2);
+        th2_ddot = zdot1(4);
+        ee = ForwardKin(p.l1, p.l2, th1, th2);
+        x_ee = ee(1); y_ee = ee(2);
+        J = JacobianEndeffector(p.l1, p.l2, th1, th2);
+        qdot = [th1_dot; th2_dot];
+        v_ee = J * qdot;
+        % Accelerazione end-effector
+        delta = 1e-6;
+        J_next = JacobianEndeffector(p.l1, p.l2, th1 + th1_dot*delta, th2 + th2_dot*delta);
+        Jdot = (J_next - J) / delta;
+        qddot = [th1_ddot; th2_ddot];
+        a_ee = J * qddot + Jdot * qdot;
+        Kp = p.Kp; Kd = p.Kd;
+        xtarget = p.xtarget;
+        ytarget = p.ytarget;
+        linear_angle = getappdata(f, 'linear_angle');
+        log_time = tnew;
         fid = fopen(p.csv_filename, 'a');
         if fid ~= -1
-            fprintf(fid, '%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n', ...
-                log_time, th1, th1_dot, th2, th2_dot, x_ee, y_ee, v_ee(1), v_ee(2), Kp, Kd, T1, T2);
+            % tempo, angolo1, vel1, acc1, torque1, angolo2, vel2, acc2, torque2, x_ee, y_ee, vx_ee, vy_ee, ax_ee, ay_ee, xtarget, ytarget, kp, kd, linear_angle
+            fprintf(fid, '%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n', ...
+                log_time, th1, th1_dot, th1_ddot, T1, th2, th2_dot, th2_ddot, T2, x_ee, y_ee, v_ee(1), v_ee(2), a_ee(1), a_ee(2), xtarget, ytarget, Kp, Kd, linear_angle);
             fclose(fid);
         end
     end

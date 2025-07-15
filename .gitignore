@@ -38,6 +38,4 @@ Thumbs.db
 
 # Other MATLAB
 *.m~
-backup
-appunti.m
-EXPORT_ALL_CODE.txt
+log_dati_simulazione*.csv
