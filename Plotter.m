@@ -149,22 +149,34 @@ while (ishandle(f))
     traj_active = getappdata(f, 'traj_active');
     traj_theta = getappdata(f, 'traj_theta');
     if autoTrajectory && traj_active
-        [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
+        T_semi = pi / vel_angolare;
+        if traj_theta <= pi
+            [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
+        else
+            t_diam = (traj_theta - pi) / vel_angolare; % tempo trascorso nella fase diametro [s]
+            T_diam = T_semi;
+            t_norm = min(t_diam / T_diam, 1); % normalizza tra 0 e 1
+            [x_traj, y_traj] = LinearTrajectory(t_norm, x_c, y_c, raggio);
+        end
         traj_theta = traj_theta + vel_angolare * dt;
-       
-            figData.xtarget = x_traj;
-            figData.ytarget = y_traj;
-            if DEBUG_SHOW_TARGET_X
-                set(targetPt,'xData',figData.xtarget);
-                set(targetPt,'yData',figData.ytarget);
-            end
-            setappdata(f, 'traj_theta', traj_theta);
-            % Debug: lascia traccia del target
-            if DEBUG_TRAJECTORY_TRACE
-                traceX(end+1) = x_traj;
-                traceY(end+1) = y_traj;
-                plotTargetTrace(tracePlot, traceX, traceY);
-            end
+        if traj_theta >= pi + T_semi * vel_angolare
+            traj_theta = 0;
+        end
+        figData.xtarget = x_traj;
+        figData.ytarget = y_traj;
+
+        % Debug: mostra la x
+        if DEBUG_SHOW_TARGET_X
+            set(targetPt,'xData',figData.xtarget);
+            set(targetPt,'yData',figData.ytarget);
+        end
+        setappdata(f, 'traj_theta', traj_theta);
+        % Debug: lascia traccia del target
+        if DEBUG_TRAJECTORY_TRACE
+            traceX(end+1) = x_traj;
+            traceY(end+1) = y_traj;
+            plotTargetTrace(tracePlot, traceX, traceY);
+        end
     end
     
     %If there are new mouse click locations, then set those as the new
