@@ -99,8 +99,11 @@ syms Kp Kd xt yt xdott ydott real
 
 zt = [xt yt 0 ]'; %Trajectory tracked
 ztdot = [xdott ydott 0]'; %velocity tracked
+impedance_force = Kp*(zt - ra_e) + Kd*(ztdot - J*[thdot1 thdot2]');
 
-Ta = J'*(Kp*(zt - ra_e) + Kd*(ztdot - J*[thdot1 thdot2]'));
+Fmax = (m1 + m2)*g;
+impedance_force(2) = max(impedance_force(2), -Fmax); % Limite superiore: verso l’alto
+Ta = J'*impedance_force;
 
 matlabFunction(Ta, 'file', 'ImpedenceControl');
 

@@ -51,8 +51,9 @@ end
 
     % === 3) Viscoelastic contact in inclined frame ===
     % Effective mass approximated using vertical Jacobian (row 2)
-    Jn   = J(2,:);                % fallback normal component
-    m_eff= 1 / (Jn * (M \ Jn'));
+    n = [ca; sa]; % normale inclinata
+    % fallback normal component
+    m_eff= (1 / (n'*(J * (M \ J'))*n));
 
     % Hunt–Crossley parameters
     [k_HC, c_HC] = computeGroundHC(p.E1, p.nu1, p.R1, p.E2, p.nu2, p.R2, p.e_restitution, m_eff);
@@ -66,18 +67,11 @@ end
     params.m_eff        = m_eff;  % effective mass for damping
     params.penetration = min(HertzPenetration(m_eff, k_HC), params.max_penetration);
     
-    display(['Ground penetration: ', num2str(params.penetration), ' m']);
-    display(['Max penetration: ', num2str(params.max_penetration), ' m']);
-    if params.penetration > params.max_penetration
-        b = (tau - C - G);
-        lambda = 0;  % no contact force
-    else
-        [lambda, ~] = GroundConstraint(vd_rot, params);
-        F_incl  = [0; -lambda]; % force in inclined frame
-        tau_constraint = J' * F_incl;
-        b = (tau - C - G + tau_constraint);
-    end    
-
+  
+    [lambda, ~] = GroundConstraint(vd_rot, params);
+    F_incl  = [0; -lambda]; % force in inclined frame
+    tau_constraint = J' * F_incl;
+    b = (tau - C - G + tau_constraint);
     qddot = M \ b;
     %qddot = R' * qddot_base;
     zdot  = [thdot1; qddot(1); thdot2; qddot(2)];
