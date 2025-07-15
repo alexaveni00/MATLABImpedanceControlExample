@@ -12,6 +12,8 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Plotter(p)
+% Valore iniziale dell'angolo della traiettoria lineare (in radianti)
+linear_angle = 0;
 close all
 
 % === DEBUG: mostra la X rossa sul target solo se attivo ===
@@ -63,6 +65,7 @@ timer = text(-3.2,-3.2,'0.00','FontSize',28);
 %Torque meters on screen
 tmeter1 = text(0.6,-3.2,'0.00','FontSize',22,'Color', 'r');
 tmeter2 = text(2.2,-3.2,'0.00','FontSize',22,'Color', 'b');
+
 
 %Target Pt.
 if DEBUG_SHOW_TARGET_X
@@ -125,6 +128,18 @@ btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
     'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@startTrajectory, f});
 set(btn, 'Enable', 'on');
 
+% Slider per regolare l'angolo della traiettoria lineare
+
+slider_width = 250;
+slider_height = 20;
+slider_x = (figWidth - slider_width) / 2;
+slider_y = figHeight - 40; % 40 pixel dal bordo superiore
+slider = uicontrol('Style', 'slider', 'Min', -pi/2, 'Max', pi/2, 'Value', linear_angle, ...
+    'Position', [slider_x slider_y slider_width slider_height], 'Callback', @(src,~) setappdata(f, 'linear_angle', get(src,'Value')));
+addlistener(slider, 'Value', 'PostSet', @(src,evt) setappdata(f, 'linear_angle', get(slider,'Value')));
+setappdata(f, 'linear_angle', linear_angle);
+
+
 % Imposta valore iniziale del ground_angle in appdata
 set(f,'UserData',figData);
 
@@ -169,14 +184,23 @@ while (ishandle(f))
     traj_theta = getappdata(f, 'traj_theta');
     if autoTrajectory && traj_active
         T_semi = pi / vel_angolare;
+        linear_angle = getappdata(f, 'linear_angle');
+        % Ruota il centro della semicirconferenza per coerenza con la traiettoria lineare
+        x_c_rot = x_c;
+        y_c_rot = y_c;
         if traj_theta <= pi
-            [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
+            [p.Kp, p.Kd] = computeKpKd(p.init(4));
+            % Durante la semicirconferenza: Kp e Kd restano fissi (valore iniziale)
+            [x0, y0] = SemicircleTrajectory(traj_theta/vel_angolare, 0, 0, raggio, vel_angolare);
+            x_traj = x_c_rot + cos(linear_angle)*x0 - sin(linear_angle)*y0;
+            y_traj = y_c_rot + sin(linear_angle)*x0 + cos(linear_angle)*y0;
         else
-            [p.Kp, p.Kd] = computeKpKd(z1(4)); % Aggiorna Kp e Kd in base alla velocità angolare del giunto del "ginocchio" (thdot2)
-            t_diam = (traj_theta - pi) / vel_angolare; % tempo trascorso nella fase diametro [s]
+            % Durante la traiettoria rettilinea: aggiorna Kp e Kd dinamicamente
+            [p.Kp, p.Kd] = computeKpKd(z1(4));
+            t_diam = (traj_theta - pi) / vel_angolare;
             T_diam = T_semi;
-            t_norm = min(t_diam / T_diam, 1); % normalizza tra 0 e 1
-            [x_traj, y_traj] = LinearTrajectory(t_norm, x_c, y_c, raggio);
+            t_norm = min(t_diam / T_diam, 1);
+            [x_traj, y_traj] = LinearTrajectory(t_norm, x_c_rot, y_c_rot, raggio, linear_angle);
         end
         traj_theta = traj_theta + vel_angolare * dt;
         if traj_theta >= pi + T_semi * vel_angolare
