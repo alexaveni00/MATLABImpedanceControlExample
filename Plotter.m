@@ -108,11 +108,12 @@ tic %Start the clock
 % === PARAMETRI TRAIETTORIA SEMICIRCONFERENZA ===
 autoTrajectory = true; % Imposta a true per attivare la traiettoria automatica
 raggio = 0.7; % raggio della semicirconferenza
-vel_angolare = pi/2; % velocità angolare [rad/s]
+vel_angolare = pi/4; % velocità angolare [rad/s]
 
 % Centro della semicirconferenza
-x_c = p.xtarget;
+x_c = p.xtarget - 0.2;
 y_c = p.ytarget;
+
 
 % Tracker per Kp, Kd, velocità end-effector
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
@@ -188,21 +189,19 @@ while (ishandle(f))
         T_semi = pi / vel_angolare;
         linear_angle = getappdata(f, 'linear_angle');
         % Ruota il centro della semicirconferenza per coerenza con la traiettoria lineare
-        x_c_rot = x_c;
-        y_c_rot = y_c;
         if traj_theta <= pi
             [p.Kp, p.Kd] = computeKpKd(p.init(4));
             % Durante la semicirconferenza: Kp e Kd restano fissi (valore iniziale)
             [x0, y0] = SemicircleTrajectory(traj_theta/vel_angolare, 0, 0, raggio, vel_angolare);
-            x_traj = x_c_rot + cos(linear_angle)*x0 - sin(linear_angle)*y0;
-            y_traj = y_c_rot + sin(linear_angle)*x0 + cos(linear_angle)*y0;
+            x_traj = x_c + cos(linear_angle)*x0 - sin(linear_angle)*y0;
+            y_traj = y_c + sin(linear_angle)*x0 + cos(linear_angle)*y0;
         else
             % Durante la traiettoria rettilinea: aggiorna Kp e Kd dinamicamente
             [p.Kp, p.Kd] = computeKpKd(z1(4));
             t_diam = (traj_theta - pi) / vel_angolare;
             T_diam = T_semi;
             t_norm = min(t_diam / T_diam, 1);
-            [x_traj, y_traj] = LinearTrajectory(t_norm, x_c_rot, y_c_rot, raggio, linear_angle);
+            [x_traj, y_traj] = LinearTrajectory(t_norm, x_c, y_c, raggio, linear_angle);
         end
         traj_theta = traj_theta + vel_angolare * dt;
         if traj_theta >= pi + T_semi * vel_angolare
@@ -245,7 +244,7 @@ while (ishandle(f))
         Kp = p.Kp; Kd = p.Kd;
         xtarget = p.xtarget;
         ytarget = p.ytarget;
-        linear_angle = getappdata(f, 'linear_angle');
+        linear_angle = rad2deg(getappdata(f, 'linear_angle'));
         log_time = tnew;
         fid = fopen(p.csv_filename, 'a');
         if fid ~= -1
