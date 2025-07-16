@@ -12,10 +12,13 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Plotter(p)
+% Valore iniziale dell'angolo della traiettoria lineare (in radianti)
+linear_angle = 0;
 close all
 
 % === DEBUG: mostra la X rossa sul target solo se attivo ===
 DEBUG_SHOW_TARGET_X = false; % Imposta a true per vedere la X rossa
+DEBUG_TRAJECTORY_TRACE = true; % imposta a true per attivare la traccia
 
 %Playback speed:
 % playback = p.animationSpeed;
@@ -28,6 +31,10 @@ figData.xend = [];
 figData.yend = [];
 figData.fig = f;
 figData.tarControl = true;
+set(f, 'ToolBar', 'none');
+set(f, 'WindowButtonMotionFcn', []);
+set(f, 'WindowButtonDownFcn',   []);
+set(f, 'WindowButtonUpFcn',     []);
 
 %%%%%%%% 1st Subplot -- the pendulum animation %%%%%%%
 figData.simArea = subplot(1,1,1); %Eliminated other subplots, but left this for syntax consistency.
@@ -59,6 +66,7 @@ timer = text(-3.2,-3.2,'0.00','FontSize',28);
 tmeter1 = text(0.6,-3.2,'0.00','FontSize',22,'Color', 'r');
 tmeter2 = text(2.2,-3.2,'0.00','FontSize',22,'Color', 'b');
 
+
 %Target Pt.
 if DEBUG_SHOW_TARGET_X
     targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
@@ -67,17 +75,9 @@ else
 end
 
 % Traccia del target (debug, creata una sola volta)
-DEBUG_TRAJECTORY_TRACE = false; % imposta a true per attivare la traccia
 traceX = [];
 traceY = [];
-tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 10, 'DisplayName', 'Target Trace');
-
-% Vincolo: retta orizzontale passante per il punto di inizio traiettoria
-DEBUG_CONSTRAINT_LINE = true; % imposta a false per nascondere la retta
-constraintLine = plot(nan, nan, 'k-', 'LineWidth', 1, 'DisplayName', 'Constraint Line');
-if DEBUG_CONSTRAINT_LINE
-    plotDebugLine(constraintLine, xlim, p.yinit);
-end
+tracePlot = plot(nan, nan, 'r.', 'MarkerSize', 3, 'DisplayName', 'Target Trace');
 
 hold off
 
@@ -103,68 +103,53 @@ z1 = p.init;
 told = 0;
 
 set(f,'UserData',figData);
-setappdata(f, 'enable_constraint', p.enable_constraint); % salva stato iniziale
 
 tic %Start the clock
 % === PARAMETRI TRAIETTORIA SEMICIRCONFERENZA ===
 autoTrajectory = true; % Imposta a true per attivare la traiettoria automatica
 raggio = 0.7; % raggio della semicirconferenza
-vel_angolare = pi/2; % velocità angolare [rad/s]
+vel_angolare = pi/4; % velocità angolare [rad/s]
 
 % Centro della semicirconferenza
-x_c = p.xtarget;
-y_c = p.ytarget; % sposta in basso
+x_c = p.xtarget - 0.2;
+y_c = p.ytarget;
 
-% Usa i limiti definiti nel main
-traj_theta_start = p.theta_start;
-traj_theta_end = p.theta_end;
 
-% Tracker per Kp, Kd, velocità end-effector e lambda
+% Tracker per Kp, Kd, velocità end-effector
 kpText = text(-3.2, -3.6, 'Kp: 0.00', 'FontSize', 18, 'Color', 'm');
 kdText = text(-3.2, -4.0, 'Kd: 0.00', 'FontSize', 18, 'Color', 'c');
 velText = text(0.6, -4.0, 'Vel: [0.00, 0.00]', 'FontSize', 18, 'Color', 'g');
-lambdaText = text(0.6, -3.6, 'lambda: 0.00', 'FontSize', 18, 'Color', [0.2 0.2 0.8]);
 
 % === Variabile di stato per la traiettoria (usata con setappdata/getappdata) ===
 setappdata(f, 'traj_active', false);
 setappdata(f, 'traj_theta', 0);
-setappdata(f, 'contatto_attivo', false);  % inizialmente il contatto è disabilitato
-
 
 % Pulsante per avviare/ripartire la traiettoria
 btn = uicontrol('Style', 'pushbutton', 'String', 'Avvia Traiettoria', ...
-    'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@restartTrajectory, f});
+    'Position', [20 20 150 40], 'FontSize', 12, 'Callback', {@startTrajectory, f});
 set(btn, 'Enable', 'on');
 
-% Pulsante terreno duro
-btnHard = uicontrol('Style', 'pushbutton', 'String', 'Terreno duro', ...
-    'Position', [20 520 120 30], ...
-    'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundTypeAndRestart(f, 'hard'));
+% Slider per regolare l'angolo della traiettoria lineare
 
-% Pulsante terreno morbido
-btnSoft = uicontrol('Style', 'pushbutton', 'String', 'Terreno morbido', ...
-    'Position', [160 520 120 30], ...
-    'FontSize', 10, ...
-    'Callback', @(src, event) changeGroundTypeAndRestart(f, 'soft'));
-% imposta default “soft”
-setappdata(f,'ground_type','hard');
-setappdata(f,'soft_params', p.softParams);
-setappdata(f,'hard_params', p.hardParams);
-figData.btnHard = btnHard;
-figData.btnSoft = btnSoft;
+slider_width = 250;
+slider_height = 20;
+slider_x = (figWidth - slider_width) / 2;
+slider_y = figHeight - 40; % 40 pixel dal bordo superiore
+slider = uicontrol('Style', 'slider', 'Min', -pi/2, 'Max', pi/2, 'Value', linear_angle, ...
+    'Position', [slider_x slider_y slider_width slider_height], 'Callback', @(src,~) setappdata(f, 'linear_angle', get(src,'Value')));
+addlistener(slider, 'Value', 'PostSet', @(src,evt) setappdata(f, 'linear_angle', get(slider,'Value')));
+setappdata(f, 'linear_angle', linear_angle);
+
+
+% Imposta valore iniziale del ground_angle in appdata
 set(f,'UserData',figData);
-
-% Label dinamica per tipo terreno
-terrainLabel = uicontrol('Style','text','String','Terreno: duro', ...
-    'Position',[300 520 150 30],'FontSize',12,'BackgroundColor',[1 1 1]);
 
 set(link1, 'HitTest','off', 'PickableParts','none');
 set(link2, 'HitTest','off', 'PickableParts','none');
 set(h1,    'HitTest','off', 'PickableParts','none');
 set(h2,    'HitTest','off', 'PickableParts','none');
 set(targetPt, 'HitTest','off', 'PickableParts','none');
-set(constraintLine, 'HitTest','off', 'PickableParts','none');
+set(tracePlot, 'HitTest', 'off', 'PickableParts', 'none');
 
 while (ishandle(f))
     figData = get(f,'UserData');
@@ -172,35 +157,7 @@ while (ishandle(f))
     tnew = toc;
     dt = tnew - told;
 
-    % === TRAIETTORIA AUTOMATICA ===
-    traj_active = getappdata(f, 'traj_active');
-    traj_theta = getappdata(f, 'traj_theta');
-    if autoTrajectory && traj_active
-        [x_traj, y_traj] = SemicircleTrajectory(traj_theta/vel_angolare, x_c, y_c, raggio, vel_angolare);
-        traj_theta = traj_theta + vel_angolare * dt;
-        if traj_theta <= traj_theta_end
-            figData.xtarget = x_traj;
-            figData.ytarget = y_traj;
-            if DEBUG_SHOW_TARGET_X
-                set(targetPt,'xData',figData.xtarget);
-                set(targetPt,'yData',figData.ytarget);
-            end
-            setappdata(f, 'traj_theta', traj_theta);
-            % Debug: lascia traccia del target
-            if DEBUG_TRAJECTORY_TRACE
-                traceX(end+1) = x_traj;
-                traceY(end+1) = y_traj;
-                plotTargetTrace(tracePlot, traceX, traceY);
-            end
-        else
-            figData.ytarget = figData.ytarget - 0.1;
-            setappdata(f, 'traj_active', false);
-            set(btn, 'Enable', 'on');
-            set(btnHard, 'Enable', 'on');
-            set(btnSoft, 'Enable', 'on');
-            setappdata(f, 'contatto_attivo', true);
-        end
-    end
+    % LOG DATI SU CSV: ora tutto dopo FullDyn
     
     %If there are new mouse click locations, then set those as the new
     %target.
@@ -223,34 +180,86 @@ while (ishandle(f))
     %Old velocity and position
     xold = [z1(1),z1(3)];
     vold = [z1(2),z1(4)];
-    % Recupera stato vincolo
-    p.enable_constraint = getappdata(f, 'enable_constraint');
-    % recupera il tipo
-    gtype = getappdata(f,'ground_type');
-    % Aggiorna label terreno
-    if strcmp(gtype,'soft')
-        set(terrainLabel,'String','Terreno: morbido');
-        gp = getappdata(f,'soft_params');
-    else
-        set(terrainLabel,'String','Terreno: duro');
-        gp = getappdata(f,'hard_params');
-    end
-    % aggiorna p con le proprietà del suolo
-    p.E2              = gp.E2;
-    p.nu2             = gp.nu2;
-    p.R2              = gp.R2;
-    p.e_restitution   = gp.e;
-
     p.fig = f; % Passa il handle della figura
-    [zdot1, T1, T2, lambda] = FullDynWithConstraintHorizontal(z1,p);
-    set(lambdaText, 'String', sprintf('lambda: %.2f', lambda));
+
+    % === TRAIETTORIA AUTOMATICA ===
+    traj_active = getappdata(f, 'traj_active');
+    traj_theta = getappdata(f, 'traj_theta');
+    if autoTrajectory && traj_active
+        T_semi = pi / vel_angolare;
+        linear_angle = getappdata(f, 'linear_angle');
+        % Ruota il centro della semicirconferenza per coerenza con la traiettoria lineare
+        if traj_theta <= pi
+            [p.Kp, p.Kd] = computeKpKd(p.init(4));
+            % Durante la semicirconferenza: Kp e Kd restano fissi (valore iniziale)
+            [x0, y0] = SemicircleTrajectory(traj_theta/vel_angolare, 0, 0, raggio, vel_angolare);
+            x_traj = x_c + cos(linear_angle)*x0 - sin(linear_angle)*y0;
+            y_traj = y_c + sin(linear_angle)*x0 + cos(linear_angle)*y0;
+        else
+            % Durante la traiettoria rettilinea: aggiorna Kp e Kd dinamicamente
+            [p.Kp, p.Kd] = computeKpKd(z1(4));
+            t_diam = (traj_theta - pi) / vel_angolare;
+            T_diam = T_semi;
+            t_norm = min(t_diam / T_diam, 1);
+            [x_traj, y_traj] = LinearTrajectory(t_norm, x_c, y_c, raggio, linear_angle);
+        end
+        traj_theta = traj_theta + vel_angolare * dt;
+        if traj_theta >= pi + T_semi * vel_angolare
+            traj_theta = 0;
+        end
+        figData.xtarget = x_traj;
+        figData.ytarget = y_traj;
+
+        % Debug: mostra la x
+        if DEBUG_SHOW_TARGET_X
+            set(targetPt,'xData',figData.xtarget);
+            set(targetPt,'yData',figData.ytarget);
+        end
+        setappdata(f, 'traj_theta', traj_theta);
+        % Debug: lascia traccia del target
+        if DEBUG_TRAJECTORY_TRACE
+            traceX(end+1) = x_traj;
+            traceY(end+1) = y_traj;
+            plotTargetTrace(tracePlot, traceX, traceY);
+        end
+    end
+    [zdot1, T1, T2] = FullDyn(z1,p);
+    % === LOG DATI SU CSV ===
+    if isfield(p, 'csv_filename') && ~isempty(p.csv_filename)
+        th1 = z1(1); th1_dot = z1(2);
+        th2 = z1(3); th2_dot = z1(4);
+        th1_ddot = zdot1(2);
+        th2_ddot = zdot1(4);
+        ee = ForwardKin(p.l1, p.l2, th1, th2);
+        x_ee = ee(1); y_ee = ee(2);
+        J = JacobianEndeffector(p.l1, p.l2, th1, th2);
+        qdot = [th1_dot; th2_dot];
+        v_ee = J * qdot;
+        % Accelerazione end-effector
+        delta = 1e-6;
+        J_next = JacobianEndeffector(p.l1, p.l2, th1 + th1_dot*delta, th2 + th2_dot*delta);
+        Jdot = (J_next - J) / delta;
+        qddot = [th1_ddot; th2_ddot];
+        a_ee = J * qddot + Jdot * qdot;
+        Kp = p.Kp; Kd = p.Kd;
+        xtarget = p.xtarget;
+        ytarget = p.ytarget;
+        linear_angle = rad2deg(getappdata(f, 'linear_angle'));
+        log_time = tnew;
+        fid = fopen(p.csv_filename, 'a');
+        if fid ~= -1
+            % tempo, angolo1, vel1, acc1, torque1, angolo2, vel2, acc2, torque2, x_ee, y_ee, vx_ee, vy_ee, ax_ee, ay_ee, xtarget, ytarget, kp, kd, linear_angle
+            fprintf(fid, '%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n', ...
+                log_time, th1, th1_dot, th1_ddot, T1, th2, th2_dot, th2_ddot, T2, x_ee, y_ee, v_ee(1), v_ee(2), a_ee(1), a_ee(2), xtarget, ytarget, Kp, Kd, linear_angle);
+            fclose(fid);
+        end
+    end
     vinter1 = [zdot1(1),zdot1(3)];
     ainter = [zdot1(2),zdot1(4)];
     vinter2 = vold + ainter*dt;
     xnew = xold + vinter2*dt;
     vnew = (xnew-xold)/dt;
     % Calcola la velocità end-effector attuale (modulo)
-    [p.Kp, p.Kd] = computeKpKd(z1(4)); % Aggiorna Kp e Kd in base alla velocità angolare del giunto del "ginocchio" (thdot2)
     z2 = [xnew(1) vnew(1) xnew(2) vnew(2)];
     z1 = z2;
     told = tnew;
@@ -299,16 +308,10 @@ while (ishandle(f))
 end
 end
 
-function restartTrajectory(~,~,f)
-    figData = get(f, 'UserData');
-    setappdata(f, 'enable_constraint', true);  % abilita vincolo orizzontale
+function startTrajectory(~,~,f)
     setappdata(f, 'traj_active', true);        % attiva traiettoria
     setappdata(f, 'traj_theta', 0);
-    setappdata(f, 'contatto_attivo', false);   % disattiva contatto fino a fine traiettoria
     set(findobj('String','Avvia Traiettoria'), 'Enable', 'off');
-    set(figData.btnHard, 'Enable', 'off');
-    set(figData.btnSoft, 'Enable', 'off');
-    resetLambdaMax();  % azzera valore lambda_max_persist
 end
 
 
@@ -322,24 +325,4 @@ function plotTargetTrace(tracePlot, traceX, traceY)
     if ishandle(tracePlot)
         set(tracePlot, 'XData', traceX, 'YData', traceY);
     end
-end
-
-function plotDebugLine(lineHandle, xlimVals, y_value)
-% plotDebugLine - Disegna una retta orizzontale su tutto l'asse a quota y_value
-    if nargin < 3
-        error('plotDebugLine richiede lineHandle, xlimVals, y_value');
-    end
-    if ishandle(lineHandle)
-        set(lineHandle, 'XData', xlimVals, 'YData', [y_value, y_value]);
-    end
-end
-
-function changeGroundTypeAndRestart(f, type)
-    setappdata(f, 'ground_type', type);
-    clear FullDynWithConstraintHorizontal
-    restartTrajectory([], [], f); % Simula il click su "Avvia Traiettoria"
-end
-
-function resetLambdaMax()
-    clear FullDynWithConstraintHorizontal  % resetta i persistent
 end

@@ -12,7 +12,6 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; close all;
-clear all;
 
 rederive = false;
 %%%%%%%% System Parameters %%%%%%%%
@@ -22,7 +21,7 @@ p.init = [-2*pi/3; 0; -pi/2; 0];
 
 % Physical constants
 p.g = 9.81;
-p.m1 = 0.5; p.m2 = 0.5;
+p.m1 = 2; p.m2 = 2;
 p.l1 = 1;   p.l2 = 1;
 p.d1 = p.l1/2; p.d2 = p.l2/2;
 p.I1 = 1/12*p.m1*p.l1^2;
@@ -39,36 +38,30 @@ x0 = endZ(1);  y0 = endZ(2);
 p.xtarget = x0;
 p.ytarget = y0;
 p.yinit   = y0;
-
+p.ground_angle = 0; % angolo iniziale del terreno (orizzontale)
 % Parameters per gestione contatto e integrazione
-p.enable_constraint = false; % Abilita vincolo orizzontale
 if rederive
     deriverRelativeAngles;
     disp('Equazioni rederive.');
 end
 
-% Parametri traiettoria semicirconferenza + estensione
-p.theta_start = 0;
-p.theta_end   = pi;
-
-% Proprietà materiale (end-effector vs suolo)
-p.E1  = 210e9;    % modulo di Young della piastra (steel) [Pa] https://www.youmath.it/lezioni/fisica/dinamica/3032-modulo-di-young.html
-p.nu1 = 0.3;      % coeff. di Poisson https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
-p.R1  = 0.05;     % raggio di curvatura dell'end-effector [m]
-
-p.hardParams = struct( ...
-  'E2', 10e9, ...        % Young del suolo (legno) [Pa] https://www.samaterials.it/content/young's-modulus-an-overview.html
-  'nu2',0.10, ...        % Poisson del suolo https://www.youmath.it/lezioni/fisica/dinamica/3033-coefficiente-di-poisson.html
-  'R2', Inf, ...        % piano
-  'e', 0.45 ...          % restitution
-);
-
-p.softParams = struct( ...
-  'E2', 1e6, ...        % Young (gomma) [Pa] (https://www.samaterials.it/content/young's-modulus-an-overview.html)
-  'nu2', 0.4, ...            % Poisson del suolo (gomma) https://www.geostru.com/help_online_2015/spw/it/index.html?database_caratteristiche_fisic.htm
-  'R2', Inf, ...
-  'e', 0.35 ...
-);
-
 % Avvia animazione & integrazione
+% === Inizializza file CSV per logging ===
+csv_filename = 'log_dati_simulazione.csv';
+csv_header = {'time', ...
+    'th1', 'th1_dot', 'th1_ddot', 'T1', ... % Giunto 1
+    'th2', 'th2_dot', 'th2_ddot', 'T2', ... % Giunto 2
+    'x_ee', 'y_ee', 'vx_ee', 'vy_ee', 'ax_ee', 'ay_ee', ... % End-effector
+    'xtarget', 'ytarget', ...
+    'Kp', 'Kd', 'linear_angle'};
+fid = fopen(csv_filename, 'w');
+fprintf(fid, '%s,', csv_header{1:end-1});
+fprintf(fid, '%s\n', csv_header{end});
+fclose(fid);
+
+% Passa il nome del file al Plotter tramite la struct p
+p.csv_filename = csv_filename;
+
 Plotter(p);
+%% ghiaia modulo di Young 2.9*10^10   poisson ratio 0.2  acciaio ghiaia0.61
+
